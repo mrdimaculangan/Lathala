@@ -1,0 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Cutive&family=League+Spartan:wght@100..900&display=swap');
+
+/* Universal box-sizing ensures padding and borders don't increase element sizes */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'League Spartan', sans-serif;
+  background-color: #f4f4f9; /* A nice, soft off-white background for your dashboards */
+  color: #333333;
+}
+
+/* Optional: Make sure the root div can take up the whole screen */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}

@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import { LogOut } from 'lucide-react';
 
 export default function Logout() {
     const handleLogout = async () => {
@@ -12,11 +13,9 @@ export default function Logout() {
     };
 
     return (
-        <button
-            onClick={handleLogout}
-            style={{ padding: '8px 16px', cursor: 'pointer', backgroundColor: '#e60000', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}
-        >
-            Sign Out
+        <button className='sidebar-link logout-btn' onClick={handleLogout}>
+            <LogOut size={22} className='sidebar-icon' />
+            <span className='sidebar-text'>Log Out</span>
         </button>
     );
 }

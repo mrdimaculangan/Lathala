@@ -1,9 +1,9 @@
-import {createBrowserRouter, Navigate} from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import Login from "./components/Login.jsx";
 import ResearcherDashboard from "./components/ResearcherDashboard.jsx";
 import { ProtectedRoute } from "./components/ProtectedRoute.jsx";
 import EvaluatorDashboard from "./components/EvaluatorDashboard.jsx";
-import AdminDashboard from "./components/AdminDashboard.jsx";
+import AdminDashboard from "./components/admin/AdminDashboard.jsx";
 
 export const router = createBrowserRouter([
     { path: "/", element: <Login /> },
@@ -18,7 +18,7 @@ export const router = createBrowserRouter([
     },
 
     // Only Evaluators  can access this
-     {
+    {
         path: "/evaluator-dashboard",
         element: (
             <ProtectedRoute allowedRoles={['Evaluator']}>

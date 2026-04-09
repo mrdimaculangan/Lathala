@@ -1,9 +1,10 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import Login from "./components/Login.jsx";
-import ResearcherDashboard from "./components/ResearcherDashboard.jsx";
+import ResearcherDashboard from "./components/Researcher/ResearcherDashboard.jsx";
 import { ProtectedRoute } from "./components/ProtectedRoute.jsx";
 import EvaluatorDashboard from "./components/EvaluatorDashboard.jsx";
 import AdminDashboard from "./components/admin/AdminDashboard.jsx";
+import ResearcherStudy from "./components/Researcher/ResearcherStudy.jsx";
 
 export const router = createBrowserRouter([
     { path: "/", element: <Login /> },
@@ -36,9 +37,16 @@ export const router = createBrowserRouter([
             </ProtectedRoute>
         )
     },
-
     {
         path: "*",
         element: <Login />
+    },
+    {
+        path: "researcher-study",
+        element: (
+            <ProtectedRoute allowedRoles={['Researcher']}>
+                <ResearcherStudy />
+            </ProtectedRoute>
+        )
     }
 ]);

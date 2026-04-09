@@ -1,0 +1,43 @@
+/* Fix the overlap issue */
+.dashboard-container {
+
+    /* Centering logic */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* Takes up the full height of the screen */
+    text-align: center;
+}
+
+.hero-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+
+.add-study-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background-color: #031640; /* A clean blue */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.add-study-btn:hover {
+    background-color: #1b2c5e;
+    transform: translateY(-2px); /* Slight lift on hover */
+}
+
+.add-study-btn:active {
+    transform: translateY(0);
+}

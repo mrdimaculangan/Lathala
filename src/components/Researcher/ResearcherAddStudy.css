@@ -1,0 +1,145 @@
+.add-study-page {
+    background-color: #fdfaf5;
+    min-height: 100vh;
+}
+
+.form-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.breadcrumb-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    position: relative;
+    background: #eee;
+    padding: 8px;
+    border-radius: 50px;
+}
+
+.breadcrumb-item {
+    position: relative;
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 600;
+    z-index: 1;
+    color: #555;
+}
+
+.breadcrumb-item.active {
+    color: white;
+}
+
+.blob {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #333a52; /* Dark theme color */
+    border-radius: 40px;
+    z-index: -1;
+}
+
+/* Card Styling */
+.section-card {
+    background: white;
+    border-radius: 40px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    overflow: hidden;
+    padding-bottom: 20px;
+}
+
+.section-header {
+    background: #333a52;
+    color: white;
+    padding: 25px 40px;
+    border-radius: 35px 35px 35px 35px;
+    margin: 10px;
+}
+
+.section-header h2 {
+    margin: 0;
+    font-size: 1.8rem;
+}
+
+/* Form Layout */
+.section-content {
+    padding: 40px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.full { grid-column: span 2; }
+
+.input-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.input-group input, .input-group textarea, .input-group select {
+    width: 100%;
+    padding: 12px 20px;
+    border: 1px solid #333a52;
+    border-radius: 15px;
+    background: #fff;
+}
+
+/* Navigation Buttons */
+.navigation-footer {
+    display: flex;
+    padding: 0 40px;
+    margin-top: 20px;
+}
+
+.spacer { flex: 1; }
+
+.nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 25px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.next { background: #333a52; color: white; }
+.prev { background: #eee; color: #333; }
+
+.upload-btn{
+    width: 100%;
+    padding: 25px;
+    border-radius: 15px;
+    border: 1.5px solid #8e94a5;
+    background: #8e94a5;
+    color: white;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.add-btn {
+    width: 100%;
+    padding: 15px;
+    border-radius: 15px;
+    border: 1.5px solid #8e94a5;
+    background: #8e94a5;
+    color: white;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+}

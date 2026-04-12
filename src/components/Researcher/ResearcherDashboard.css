@@ -1,11 +1,8 @@
-/* Fix the overlap issue */
 .dashboard-container {
-
-    /* Centering logic */
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh; /* Takes up the full height of the screen */
+    min-height: 100vh;
     text-align: center;
 }
 
@@ -22,7 +19,7 @@
     align-items: center;
     gap: 10px;
     padding: 12px 24px;
-    background-color: #031640; /* A clean blue */
+    background-color: #031640;
     color: white;
     border: none;
     border-radius: 8px;
@@ -35,7 +32,7 @@
 
 .add-study-btn:hover {
     background-color: #1b2c5e;
-    transform: translateY(-2px); /* Slight lift on hover */
+    transform: translateY(-2px);
 }
 
 .add-study-btn:active {

@@ -27,9 +27,9 @@ function Login() {
         }
 
         const { data: profile } = await supabase
-            .from('profiles')
+            .from('Users')
             .select('role')
-            .eq('id', data.user.id)
+            .eq('user_id', data.user.id)
             .single();
 
         if (profile?.role === 'Researcher') {
@@ -39,7 +39,7 @@ function Login() {
         } else if (profile?.role === 'Admin') {
             navigate('/admin-dashboard');
         } else {
-            navigate('/dashboard');
+            navigate('/login');
         }
     };
 

@@ -4,7 +4,7 @@ import ResearcherDashboard from "./components/Researcher/ResearcherDashboard.jsx
 import { ProtectedRoute } from "./components/ProtectedRoute.jsx";
 import EvaluatorDashboard from "./components/EvaluatorDashboard.jsx";
 import AdminDashboard from "./components/admin/AdminDashboard.jsx";
-import ResearcherStudy from "./components/Researcher/ResearcherStudy.jsx";
+import ResearcherAddStudy from "./components/Researcher/ResearcherAddStudy.jsx";
 
 export const router = createBrowserRouter([
     { path: "/", element: <Login /> },
@@ -38,15 +38,15 @@ export const router = createBrowserRouter([
         )
     },
     {
+        path: "/researcher-study",
+        element: (
+            <ProtectedRoute allowedRoles={['Researcher']}>
+                <ResearcherAddStudy />
+            </ProtectedRoute>
+        )
+    },
+    {
         path: "*",
         element: <Login />
     },
-    {
-        path: "researcher-study",
-        element: (
-            <ProtectedRoute allowedRoles={['Researcher']}>
-                <ResearcherStudy />
-            </ProtectedRoute>
-        )
-    }
 ]);

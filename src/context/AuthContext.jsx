@@ -39,9 +39,9 @@ export const AuthContextProvider = ({ children }) => {
     const fetchUserProfile = async (userId) => {
         try {
             const { data, error } = await supabase
-                .from('profiles')
+                .from('Users')
                 .select('role, first_name, last_name')
-                .eq('id', userId)
+                .eq('user_id', userId)
                 .single();
 
             if (data) {

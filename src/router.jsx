@@ -3,7 +3,8 @@ import Login from "./components/Login.jsx";
 import ResearcherDashboard from "./components/Researcher/ResearcherDashboard.jsx";
 import { ProtectedRoute } from "./components/ProtectedRoute.jsx";
 import EvaluatorDashboard from "./components/EvaluatorDashboard.jsx";
-import AdminDashboard from "./components/admin/AdminDashboard.jsx";
+import AdminDashboard from "./components/Admin/AdminDashboard.jsx";
+import AdminUserManagement from "./components/Admin/AdminUserManagement.jsx";
 import ResearcherAddStudy from "./components/Researcher/ResearcherAddStudy.jsx";
 
 export const router = createBrowserRouter([
@@ -34,6 +35,14 @@ export const router = createBrowserRouter([
         element: (
             <ProtectedRoute allowedRoles={['Admin']}>
                 <AdminDashboard />
+            </ProtectedRoute>
+        )
+    },
+    {
+        path: "/admin/users",
+        element: (
+            <ProtectedRoute allowedRoles={['Admin']}>
+                <AdminUserManagement />
             </ProtectedRoute>
         )
     },

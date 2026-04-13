@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import logoImg from '../assets/logo.png';
+import './Login.css';
 
 function Login() {
     const [email, setEmail] = useState('');
@@ -44,109 +46,63 @@ function Login() {
     };
 
     return (
-        <div style={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: 'system-ui, -apple-system, sans-serif'
-        }}>
-            <div style={{
-                backgroundColor: '#ffffff',
-                padding: '3rem',
-                borderRadius: '12px',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                width: '100%',
-                maxWidth: '400px'
-            }}>
-                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                    <h2 style={{ margin: '0', color: '#1a1a1a', fontSize: '2rem', fontWeight: '800' }}>
-                        Welcome Back
-                    </h2>
-                    <p style={{ margin: '8px 0 0', color: '#666', fontSize: '0.9rem' }}>
-                        Please enter your details to sign in.
+        <div className="login-page">
+            <div className="login-brand-section">
+                <div className='brand-content'>
+                    <img src={logoImg} alt="Logo" className="login-logo" />
+                    <h1 className='brand-statement'>Elevating Institutional Research.</h1>
+                    <p className='brand-description'>
+                        A comprehensive platform engineered for academic excellence,
+                        ethical integrity, and optimized research management.
                     </p>
                 </div>
+            </div>
 
-                {error && (
-                    <div style={{
-                        backgroundColor: '#fee2e2',
-                        color: '#991b1b',
-                        padding: '12px',
-                        borderRadius: '6px',
-                        marginBottom: '1.5rem',
-                        fontSize: '0.875rem',
-                        textAlign: 'center'
-                    }}>
-                        {error}
-                    </div>
-                )}
-
-                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '6px', color: '#333', fontSize: '0.875rem', fontWeight: '600' }}>
-                            Email Address
-                        </label>
-                        <input
-                            type="email"
-                            placeholder="name@company.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            style={{
-                                width: '100%',
-                                padding: '12px',
-                                borderRadius: '6px',
-                                border: '1px solid #ddd',
-                                fontSize: '1rem',
-                                boxSizing: 'border-box',
-                                outline: 'none'
-                            }}
-                        />
+            <div className='login-form-section'>
+                <div className='login-box'>
+                    <div className="login-header">
+                        <h2>Welcome Back!</h2>
+                        <p>Sign in to manage your research projects.</p>
                     </div>
 
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '6px', color: '#333', fontSize: '0.875rem', fontWeight: '600' }}>
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            style={{
-                                width: '100%',
-                                padding: '12px',
-                                borderRadius: '6px',
-                                border: '1px solid #ddd',
-                                fontSize: '1rem',
-                                boxSizing: 'border-box',
-                                outline: 'none'
-                            }}
-                        />
-                    </div>
+                    {error && <div className="login-error">{error}</div>}
 
-                    <button
-                        type="submit"
-                        disabled={isLoggingIn}
-                        style={{
-                            marginTop: '0.5rem',
-                            padding: '14px',
-                            backgroundColor: isLoggingIn ? '#1f1340' : '#0b024a', /* Bold racing red */
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '1rem',
-                            fontWeight: 'bold',
-                            cursor: isLoggingIn ? 'not-allowed' : 'pointer',
-                            transition: 'background-color 0.2s',
-                            boxShadow: '0 4px 6px rgba(230, 0, 0, 0.2)'
-                        }}
-                    >
-                        {isLoggingIn ? 'Signing In...' : 'Sign In'}
-                    </button>
-                </form>
+                    <form className="login-form" onSubmit={handleLogin}>
+                        <div className='input-group'>
+                            <label>EMAIL ADDRESS</label>
+                            <input
+                                type="email"
+                                placeholder="Enter your email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="input-group">
+                            <label>PASSWORD</label>
+                            <input
+                                type="password"
+                                placeholder="Enter your password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="form-footer">
+                            <label className="checkbox-container">
+                                <input type="checkbox" />
+                                <span className="checkmark"></span>
+                                Remember me
+                            </label>
+                            <a href="/forgot-password">Forgot password?</a>
+                        </div>
+                        <button type="submit" className="login-btn" disabled={isLoggingIn}>
+                            {isLoggingIn ? 'SIGNING IN...' : 'SIGN IN'}
+                        </button>
+                    </form>
+                    <hr></hr>
+                    <p className="copyright">© 2024 Lathala Research Management System. All rights reserved.</p>
+                </div>
             </div>
         </div>
     );

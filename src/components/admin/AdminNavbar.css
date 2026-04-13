@@ -10,6 +10,11 @@
     background-color: #ffffff;
     border-bottom: 1px solid #eee;
     height: 60px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 101;
 }
 
 .navbar-group-left {
@@ -160,7 +165,7 @@
     align-items: center;
     padding: 12px 15px;
     text-decoration: none;
-    justify-content: fl;
+    justify-content: flex-start;
     color: #9499a1;
     border-radius: 60px;
     transition: all 0.2s ease;

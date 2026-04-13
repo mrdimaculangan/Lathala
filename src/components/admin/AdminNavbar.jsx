@@ -63,7 +63,7 @@ export default function AdminNavbar() {
                             </NavLink>
                         </li>
                         <li>
-                            <NavLink to="/user-management" className='sidebar-link'>
+                            <NavLink to="/admin/users" className='sidebar-link'>
                                 <Users size={22} className='sidebar-icon' />
                                 <span className='sidebar-text'>User Management</span>
                             </NavLink>

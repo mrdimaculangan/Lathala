@@ -1,0 +1,60 @@
+.admin-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.admin-content {
+    margin-left: 75px;
+    padding-top: 80px;
+    padding-left: 40px;
+    padding-right: 40px;
+    background-color: #F6F2E5;
+    min-height: 100vh;
+    transition: margin-left 0.3s ease;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.header-left h1 {
+    font-family: s'Inter', sans-serif;
+    color: #31344F;
+    font-weight: 900;
+    font-size: 2.5rem;
+}
+
+.header-left p {
+    font-family: 'Inter', sans-serif;
+    color: #31344F;
+    font-weight: 300;
+    font-size: 1rem;
+    margin-top: 10px;
+}
+
+.add-user-button {
+    background-color: #30336b;
+    color: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 30px;
+    border-radius: 60px;
+    border: none;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.add-user-button:hover {
+    background-color: #3c408a;
+    transform: translateY(-1px);
+}

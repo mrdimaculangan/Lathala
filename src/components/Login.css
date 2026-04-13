@@ -1,0 +1,190 @@
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,700;1,400&display=swap');
+
+* {
+    font-family: 'Inter', serif;
+}
+
+.login-page {
+    display: flex;
+    min-height: 100vh;
+    font-family: 'Crimson Text', serif;
+}
+
+.login-brand-section {
+    flex: 1;
+    background-color: #E6DDC4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+}
+
+.brand-content {
+    max-width: 600px;
+}
+
+.login-logo {
+    width: 100px;
+    margin-bottom: 40px;
+}
+
+.brand-statement {
+    font-size: 5rem;
+    line-height: 1.1;
+    color: #2D3142;
+    margin-bottom: 24px;
+    font-weight: bold;
+    font-style: italic;
+    font-family: 'Crimson Text', serif;
+}
+
+.brand-description {
+    font-family: 'Crimson Text', sans-serif;
+    color: #5F657D;
+    font-size: 1.3rem;
+    line-height: 1.2;
+}
+
+.login-form-section {
+    flex: 1;
+    background-color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.login-box {
+    width: 100%;
+    max-width: 450px;
+}
+
+.login-header {
+    text-align: left;
+    margin-bottom: 50px;
+}
+
+.login-header h2 {
+    font-family: 'Crimson Text', serif;
+    font-size: 2.5rem;
+    color: #2E344A;
+    margin: 0 0 8px 0;
+    line-height: 1.2;
+}
+
+.login-header p {
+    font-family: 'Inter', sans-serif;
+    color: #BABABA;
+    margin: 0;
+    font-size: 1rem;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.input-group label {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500 !important;
+    color: #718096;
+    margin-bottom: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 24px 30px !important;
+    background-color: #F9F9F9 !important;
+    border: 1px solid #E7E7E7 !important;
+    border-radius: 100px !important;
+    font-size: 1rem !important;
+    outline: none;
+    transition: border 0.2s;
+    outline: none;
+    transition: all 0.2s ease-in-out;
+    color: #64748b;
+}
+
+.input-group input:focus {
+    border-color: #2D3142 !important;
+    color: #2D3142;
+}
+
+.input-group:focus-within label {
+    color: #2D3142;
+    transition: color 0.2s ease;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.checkbox-container input {
+    margin: 0;
+    cursor: pointer;
+}
+
+.form-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: sans-serif;
+    font-size: 0.85rem;
+}
+
+.form-footer a {
+    color: #31344F;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.login-btn {
+    background-color: #32374B;
+    color: white;
+    padding: 18px;
+    border: none;
+    border-radius: 30px;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.login-btn:hover {
+    background-color: #1a1e2e;
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid #F0F0F0;
+    margin: 20px 0;
+    width: 100%;
+}
+
+.copyright {
+    margin-top: 10px;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    color: #CBD5E0;
+    letter-spacing: 0.02em;
+}
+
+.login-error {
+    background-color: #FFF5F5;
+    color: #C53030;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-family: sans-serif;
+    text-align: center;
+}

@@ -2,13 +2,15 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import Login from "./components/Login.jsx";
 import ResearcherDashboard from "./components/Researcher/ResearcherDashboard.jsx";
 import { ProtectedRoute } from "./components/ProtectedRoute.jsx";
-import EvaluatorDashboard from "./components/EvaluatorDashboard.jsx";
+import EvaluatorDashboard from "./components/Evaluator/EvaluatorDashboard.jsx";
 import AdminDashboard from "./components/Admin/AdminDashboard.jsx";
 import AdminUserManagement from "./components/Admin/AdminUserManagement.jsx";
 import ResearcherAddStudy from "./components/Researcher/ResearcherAddStudy.jsx";
+import EvaluateResearch from "./components/Evaluator/EvaluateResearch.jsx"; // Keep this once
 
 export const router = createBrowserRouter([
     { path: "/", element: <Login /> },
+    
     // Only Researchers can access this
     {
         path: "/researcher-dashboard",
@@ -19,12 +21,22 @@ export const router = createBrowserRouter([
         )
     },
 
-    // Only Evaluators  can access this
+    // Only Evaluators can access this
     {
         path: "/evaluator-dashboard",
         element: (
             <ProtectedRoute allowedRoles={['Evaluator']}>
                 <EvaluatorDashboard />
+            </ProtectedRoute>
+        )
+    },
+
+    // Add the route for evaluating individual research
+    {
+        path: "/evaluate-research/:researchId",  // Note the :researchId parameter
+        element: (
+            <ProtectedRoute allowedRoles={['Evaluator']}>
+                <EvaluateResearch />
             </ProtectedRoute>
         )
     },

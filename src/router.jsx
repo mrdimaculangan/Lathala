@@ -6,12 +6,11 @@ import EvaluatorDashboard from "./components/Evaluator/EvaluatorDashboard.jsx";
 import AdminDashboard from "./components/Admin/AdminDashboard.jsx";
 import AdminUserManagement from "./components/Admin/AdminUserManagement.jsx";
 import ResearcherAddStudy from "./components/Researcher/ResearcherAddStudy.jsx";
-import EvaluateResearch from "./components/Evaluator/EvaluateResearch.jsx"; // Keep this once
+import EvaluateResearch from "./components/Evaluator/EvaluateResearch.jsx";
 
 export const router = createBrowserRouter([
     { path: "/", element: <Login /> },
-    
-    // Only Researchers can access this
+    { path: "/login", element: <Login /> },
     {
         path: "/researcher-dashboard",
         element: (
@@ -20,8 +19,6 @@ export const router = createBrowserRouter([
             </ProtectedRoute>
         )
     },
-
-    // Only Evaluators can access this
     {
         path: "/evaluator-dashboard",
         element: (
@@ -30,18 +27,14 @@ export const router = createBrowserRouter([
             </ProtectedRoute>
         )
     },
-
-    // Add the route for evaluating individual research
     {
-        path: "/evaluate-research/:researchId",  // Note the :researchId parameter
+        path: "/evaluate-research/:researchId",
         element: (
             <ProtectedRoute allowedRoles={['Evaluator']}>
                 <EvaluateResearch />
             </ProtectedRoute>
         )
     },
-
-    // Only admin can access this
     {
         path: "/admin-dashboard",
         element: (
@@ -66,8 +59,5 @@ export const router = createBrowserRouter([
             </ProtectedRoute>
         )
     },
-    {
-        path: "*",
-        element: <Login />
-    },
+    { path: "*", element: <Login /> },
 ]);

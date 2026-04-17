@@ -174,51 +174,72 @@ function EvaluateResearch() {
                                     <label>
                                         Scientific Rigor <span className="required">*</span>
                                     </label>
-                                    <select
-                                        value={evaluation.scientificRigor}
-                                        onChange={handleChange('scientificRigor')}
-                                    >
-                                        <option value="">Select a score</option>
-                                        <option value="5">5 - Excellent</option>
-                                        <option value="4">4 - Strong</option>
-                                        <option value="3">3 - Adequate</option>
-                                        <option value="2">2 - Needs Improvement</option>
-                                        <option value="1">1 - Poor</option>
-                                    </select>
+                                    <div className="rating-scale">
+                                        {[5, 4, 3, 2, 1].map((value) => (
+                                            <label
+                                                key={value}
+                                                className={`rating-option ${evaluation.scientificRigor === String(value) ? 'selected' : ''}`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="scientificRigor"
+                                                    value={value}
+                                                    checked={evaluation.scientificRigor === String(value)}
+                                                    onChange={handleChange('scientificRigor')}
+                                                />
+                                                <span>{value}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <div className="rating-help">1 = Poor, 5 = Excellent</div>
                                 </div>
 
                                 <div className="evaluate-input-group">
                                     <label>
                                         Ethical Compliance <span className="required">*</span>
                                     </label>
-                                    <select
-                                        value={evaluation.ethicalCompliance}
-                                        onChange={handleChange('ethicalCompliance')}
-                                    >
-                                        <option value="">Select a rating</option>
-                                        <option value="5">5 - Fully compliant</option>
-                                        <option value="4">4 - Generally compliant</option>
-                                        <option value="3">3 - Some concerns</option>
-                                        <option value="2">2 - Serious concerns</option>
-                                        <option value="1">1 - Not compliant</option>
-                                    </select>
+                                    <div className="rating-scale">
+                                        {[5, 4, 3, 2, 1].map((value) => (
+                                            <label
+                                                key={value}
+                                                className={`rating-option ${evaluation.ethicalCompliance === String(value) ? 'selected' : ''}`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="ethicalCompliance"
+                                                    value={value}
+                                                    checked={evaluation.ethicalCompliance === String(value)}
+                                                    onChange={handleChange('ethicalCompliance')}
+                                                />
+                                                <span>{value}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <div className="rating-help">1 = Not compliant, 5 = Fully compliant</div>
                                 </div>
 
                                 <div className="evaluate-input-group">
                                     <label>
                                         Relevance to HRU Objectives <span className="required">*</span>
                                     </label>
-                                    <select
-                                        value={evaluation.relevance}
-                                        onChange={handleChange('relevance')}
-                                    >
-                                        <option value="">Select a rating</option>
-                                        <option value="5">5 - Highly relevant</option>
-                                        <option value="4">4 - Relevant</option>
-                                        <option value="3">3 - Moderately relevant</option>
-                                        <option value="2">2 - Marginally relevant</option>
-                                        <option value="1">1 - Not relevant</option>
-                                    </select>
+                                    <div className="rating-scale">
+                                        {[5, 4, 3, 2, 1].map((value) => (
+                                            <label
+                                                key={value}
+                                                className={`rating-option ${evaluation.relevance === String(value) ? 'selected' : ''}`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="relevance"
+                                                    value={value}
+                                                    checked={evaluation.relevance === String(value)}
+                                                    onChange={handleChange('relevance')}
+                                                />
+                                                <span>{value}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <div className="rating-help">1 = Not relevant, 5 = Highly relevant</div>
                                 </div>
 
                                 <div className="evaluate-input-group">

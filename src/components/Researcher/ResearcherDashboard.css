@@ -1,18 +1,34 @@
-.dashboard-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    text-align: center;
-}
 
-.hero-section {
+.dashboard-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.5rem;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    gap: 3rem;
 }
 
+
+.hero-section {
+    text-align: center;
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
+    width: 100%;
+}
+
+
+.studies-section {
+    width: 100%;
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
 
 .add-study-btn {
     display: flex;
@@ -37,4 +53,257 @@
 
 .add-study-btn:active {
     transform: translateY(0);
+}
+
+/* TABLE STYLES */
+.studies-section {
+    margin-top: 3rem;
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.studies-section h2 {
+    margin-bottom: 1.5rem;
+    color: #1a1a1a;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.studies-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.studies-table th {
+    background-color: #f8fafc;
+    padding: 12px 16px;
+    font-weight: 600;
+    color: #475569;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.studies-table td {
+    padding: 16px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+}
+
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.clickable-row:hover {
+    background-color: #f1f5f9;
+}
+
+.title-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hru-badge {
+    font-size: 0.75rem;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    width: fit-content;
+}
+
+.file-list-item {
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 250px;
+}
+
+.file-type-badge {
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+    background: #e0e7ff;
+    color: #3730a3;
+    padding: 4px 8px;
+    border-radius: 6px;
+    width: fit-content;
+}
+
+/* MODAL / OVERLAY STYLES */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-content {
+    background: white;
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #0f172a;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #64748b;
+    transition: color 0.2s;
+}
+
+.close-btn:hover {
+    color: #910303;
+}
+
+.modal-body {
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.detail-section {
+    margin-bottom: 30px;
+}
+
+.detail-section h3 {
+    font-size: 1rem;
+    color: #334155;
+    margin-bottom: 16px;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 8px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.detail-item label {
+    display: block;
+    font-size: 0.8rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+
+.detail-item p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #0f172a;
+    font-weight: 500;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+    margin-top: 10px;
+}
+
+.description-text {
+    line-height: 1.6;
+    font-weight: 400 !important;
+}
+
+.bioinformatics-section {
+    background: #f8fafc;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+/* FILE CARDS IN MODAL */
+.file-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+}
+
+.file-card {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+}
+
+.file-card:hover {
+    border-color: #031b42;
+    background: #eff6ff;
+}
+
+.file-icon {
+    color: #022050;
+    margin-right: 12px;
+}
+
+.file-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.fname {
+    font-size: 0.9rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ftype {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.download-icon {
+    color: #94a3b8;
+}
+
+.file-card:hover .download-icon {
+    color: #01173a;
 }

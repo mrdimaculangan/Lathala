@@ -6,7 +6,9 @@ import EvaluatorDashboard from "./components/Evaluator/EvaluatorDashboard.jsx";
 import AdminDashboard from "./components/Admin/AdminDashboard.jsx";
 import AdminUserManagement from "./components/Admin/AdminUserManagement.jsx";
 import ResearcherAddStudy from "./components/Researcher/ResearcherAddStudy.jsx";
-import EvaluateResearch from "./components/Evaluator/EvaluateResearch.jsx"; // Keep this once
+import ErrorPage from "./components/ErrorPage.jsx";
+import EvaluateResearch from "./components/Evaluator/EvaluateResearch.jsx"; 
+
 
 export const router = createBrowserRouter([
     { path: "/", element: <Login /> },
@@ -68,6 +70,6 @@ export const router = createBrowserRouter([
     },
     {
         path: "*",
-        element: <Login />
+        element: <ErrorPage />
     },
 ]);

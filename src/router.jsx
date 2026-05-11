@@ -7,6 +7,8 @@ import AdminDashboard from "./components/Admin/AdminDashboard.jsx";
 import AdminUserManagement from "./components/Admin/AdminUserManagement.jsx";
 import ResearcherAddStudy from "./components/Researcher/ResearcherAddStudy.jsx";
 import ErrorPage from "./components/ErrorPage.jsx";
+import EvaluateResearch from "./components/Evaluator/EvaluateResearch.jsx"; 
+
 
 export const router = createBrowserRouter([
     { path: "/", element: <Login /> },

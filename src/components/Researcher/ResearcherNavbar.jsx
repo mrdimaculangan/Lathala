@@ -51,6 +51,12 @@ export default function ResearcherNavbar() {
                             </NavLink>
                         </li>
                         <li>
+                            <NavLink to="/user-profile" className='sidebar-link'>
+                                <Users size={22} className='sidebar-icon' />
+                                <span className='sidebar-text'>Profile</span>
+                            </NavLink>
+                        </li>
+                        <li>
                             <NavLink to="/inventory" className='sidebar-link'>
                                 <FileText size={22} className='sidebar-icon' />
                                 <span className='sidebar-text'>Research Inventory</span>
@@ -60,18 +66,6 @@ export default function ResearcherNavbar() {
                             <NavLink to="/review-queue" className='sidebar-link'>
                                 <FilePlus2 size={22} className='sidebar-icon' />
                                 <span className='sidebar-text'>Review Queue</span>
-                            </NavLink>
-                        </li>
-                        <li>
-                            <NavLink to="/user-management" className='sidebar-link'>
-                                <Users size={22} className='sidebar-icon' />
-                                <span className='sidebar-text'>User Management</span>
-                            </NavLink>
-                        </li>
-                        <li>
-                            <NavLink to="/activity-log" className='sidebar-link'>
-                                <History size={22} className='sidebar-icon' />
-                                <span className='sidebar-text'>Activity Log</span>
                             </NavLink>
                         </li>
                     </ul>

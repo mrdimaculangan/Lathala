@@ -1,10 +1,12 @@
 .add-study-page {
     background-color: #fdfaf5;
     min-height: 100vh;
+    padding-top: 80px;
+    font-family: 'Inter', sans-serif;
 }
 
 .form-wrapper {
-    max-width: 900px;
+    max-width: 1000px;
     margin: 0 auto;
     padding: 20px;
 }
@@ -12,23 +14,24 @@
 .breadcrumb-container {
     display: flex;
     gap: 10px;
-    margin-bottom: 30px;
+    margin-bottom: 25px;
     position: relative;
-    background: #eee;
-    padding: 8px;
+    background: #f1f1f1;
+    padding: 6px;
     border-radius: 50px;
 }
 
 .breadcrumb-item {
     position: relative;
     flex: 1;
-    padding: 12px;
+    padding: 10px;
     border: none;
     background: transparent;
     cursor: pointer;
     font-weight: 600;
     z-index: 1;
-    color: #555;
+    color: #666;
+    transition: color 0.3s;
 }
 
 .breadcrumb-item.active {
@@ -38,66 +41,106 @@
 .blob {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: #333a52; /* Dark theme color */
+    background: #333a52;
     border-radius: 40px;
     z-index: -1;
 }
 
-/* Card Styling */
+
 .section-card {
     background: white;
-    border-radius: 40px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-    overflow: hidden;
-    padding-bottom: 20px;
+    border-radius: 45px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+    padding-bottom: 30px;
 }
 
 .section-header {
     background: #333a52;
     color: white;
-    padding: 25px 40px;
-    border-radius: 35px 35px 35px 35px;
-    margin: 10px;
+    padding: 20px 45px;
+    border-radius: 35px;
+    margin: 15px;
+    display: flex;
+    align-items: center;
 }
 
 .section-header h2 {
     margin: 0;
-    font-size: 1.8rem;
+    font-weight: bold;
+    font-size: 2rem;
+    letter-spacing: 0.5px;
 }
 
-/* Form Layout */
+.section-header i {
+    font-weight: 300;
+    margin-left: 10px;
+}
+
+
 .section-content {
-    padding: 40px;
+    padding: 20px 50px;
 }
 
 .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    gap: 25px;
 }
 
 .full { grid-column: span 2; }
 
 .input-group label {
     display: block;
-    font-weight: bold;
-    margin-bottom: 8px;
-    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #000;
+    font-size: 0.95rem;
 }
 
-.input-group input, .input-group textarea, .input-group select {
+.input-group input,
+.input-group textarea,
+.input-group select,
+.co-author-input {
     width: 100%;
-    padding: 12px 20px;
-    border: 1px solid #333a52;
-    border-radius: 15px;
+    padding: 14px 20px;
+    border: 1.5px solid #333a52;
+    border-radius: 18px;
     background: #fff;
+    font-size: 1rem;
+    margin-bottom: 10px;
 }
 
-/* Navigation Buttons */
+.input-group input::placeholder {
+    color: #aaa;
+}
+
+
+.add-btn, .upload-btn {
+    width: 100%;
+    padding: 18px;
+    border-radius: 18px;
+    border: none;
+    background: #8e94a5;
+    color: white;
+    font-weight: 700;
+    font-size: 1.1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.add-btn:hover, .upload-btn:hover {
+    opacity: 0.9;
+}
+
+
 .navigation-footer {
     display: flex;
-    padding: 0 40px;
-    margin-top: 20px;
+    padding: 0 50px;
+    margin-top: 30px;
 }
 
 .spacer { flex: 1; }
@@ -105,41 +148,119 @@
 .nav-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 25px;
-    border-radius: 12px;
+    gap: 10px;
+    padding: 12px 30px;
+    border-radius: 15px;
     border: none;
     cursor: pointer;
-    font-weight: bold;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.co-author-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+
+.co-author-wrapper {
+    position: relative;
+    width: 100%;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+}
+
+.co-author-input {
+    width: 100%;
+    margin-bottom: 0 !important;
+}
+
+.inner-delete-btn {
+    position: absolute;
+    right: 15px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    transition: transform 0.2s;
+}
+
+.inner-delete-btn:hover {
+    transform: scale(1.2);
+}
+
+.inner-delete-btn svg {
+    stroke-width: 2.5px;
+}
+
+.inner-delete-btn:hover svg {
+    color: #666 !important;
+}
+
+.file-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.file-item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    gap: 15px;
+}
+
+.file-name {
+    flex: 1;
+    font-weight: 600;
+    color: #333a52;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-type-select {
+    width: auto !important;
+    min-width: 200px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    background: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-bottom: 0 !important;
+}
+
+
+.remove-file-btn {
+    background: #450202;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.remove-file-btn:hover {
+    background: #5e0202;
 }
 
 .next { background: #333a52; color: white; }
-.prev { background: #eee; color: #333; }
-
-.upload-btn{
-    width: 100%;
-    padding: 25px;
-    border-radius: 15px;
-    border: 1.5px solid #8e94a5;
-    background: #8e94a5;
-    color: white;
-    font-weight: bold;
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    cursor: pointer;
-}
-
-.add-btn {
-    width: 100%;
-    padding: 15px;
-    border-radius: 15px;
-    border: 1.5px solid #8e94a5;
-    background: #8e94a5;
-    color: white;
-    font-weight: bold;
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    cursor: pointer;
-}
+.prev { background: #e0e0e0; color: #444; }
+.submit-btn { background: #2e7d32; color: white; }

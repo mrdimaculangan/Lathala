@@ -227,11 +227,6 @@ export default function ResearcherDashboard() {
                         {/* Right: Calendar Section */}
                         <div className="calendar-section">
                             {renderCalendar()}
-
-                            <div className="upcoming-deadlines">
-                                <h3>UPCOMING DEADLINES</h3>
-
-                            </div>
                         </div>
                     </div>
                 </main>

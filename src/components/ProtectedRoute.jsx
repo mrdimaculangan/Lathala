@@ -14,15 +14,15 @@ export const ProtectedRoute = ({ children, allowedRoles }) => {
         );
     }
 
-    // If they are not logged in at all, kick them back to login
+    // If they are not logged in at all, kick them to error page
     if (!session) {
-        return <Navigate to="/login" replace />;
+        return <Navigate to="/" replace />;
     }
 
     // If the route requires specific roles, and the user doesn't have one of them
     if (allowedRoles && !allowedRoles.includes(userRole)) {
-        // Kick them to login
-        return <Navigate to="/login" replace />;
+        // Kick them to error page
+        return <Navigate to="/" replace />;
     }
 
     return children;

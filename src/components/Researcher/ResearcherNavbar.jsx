@@ -59,13 +59,7 @@ export default function ResearcherNavbar() {
                         <li>
                             <NavLink to="/inventory" className='sidebar-link'>
                                 <FileText size={22} className='sidebar-icon' />
-                                <span className='sidebar-text'>Research Inventory</span>
-                            </NavLink>
-                        </li>
-                        <li>
-                            <NavLink to="/review-queue" className='sidebar-link'>
-                                <FilePlus2 size={22} className='sidebar-icon' />
-                                <span className='sidebar-text'>Review Queue</span>
+                                <span className='sidebar-text'>Activity Log</span>
                             </NavLink>
                         </li>
                     </ul>

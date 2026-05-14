@@ -97,6 +97,39 @@
     font-size: 0.95rem;
 }
 
+/*  Bioinformatics Yes/No Buttons */
+.bio-button-group {
+    display: flex;
+    gap: 15px;
+    margin-top: 5px;
+}
+
+.bio-btn {
+    flex: 1;
+    max-width: 150px;
+    padding: 12px 24px;
+    background: transparent;
+    border: 2px solid #333a52;
+    color: #333a52;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.bio-btn:hover {
+    background: #f0f2f5;
+}
+
+.bio-btn.active {
+    background: #333a52;
+    color: white;
+    box-shadow: 0 4px 10px rgba(51, 58, 82, 0.25);
+    transform: translateY(-2px);
+}
+
 .input-group input,
 .input-group textarea,
 .input-group select,
@@ -144,18 +177,6 @@
 }
 
 .spacer { flex: 1; }
-
-.nav-btn {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 30px;
-    border-radius: 15px;
-    border: none;
-    cursor: pointer;
-    font-weight: 700;
-    font-size: 1rem;
-}
 
 .co-author-row {
     display: flex;
@@ -210,15 +231,22 @@
     margin-top: 10px;
 }
 
+.file-item-row .file-type-select {
+    width: auto !important;
+    min-width: 160px;
+    flex-shrink: 0;
+    margin-bottom: 0 !important;   /* removes the 10px gap pushing it down */
+    border-radius: 10px;
+}
+
 .file-item-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 12px 20px;
+    gap: 12px;
+    padding: 12px 16px;
     background: #f8f9fa;
     border: 1px solid #ddd;
     border-radius: 12px;
-    gap: 15px;
 }
 
 .file-name {
@@ -230,20 +258,29 @@
     white-space: nowrap;
 }
 
+.file-hint {
+    font-size: 0.8rem;
+    color: #888;
+    margin-top: 6px;
+    margin-left: 4px;
+}
+
+/* ── Custom Select Arrow ── */
+.input-group select,
 .file-type-select {
-    width: auto !important;
-    min-width: 200px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    background: white;
-    font-size: 0.9rem;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23333a52' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 16px;
+    padding-right: 44px;
     cursor: pointer;
-    margin-bottom: 0 !important;
 }
 
 
 .remove-file-btn {
+    flex-shrink: 0;
     background: #450202;
     color: white;
     border: none;
@@ -261,6 +298,67 @@
     background: #5e0202;
 }
 
-.next { background: #333a52; color: white; }
-.prev { background: #e0e0e0; color: #444; }
-.submit-btn { background: #2e7d32; color: white; }
+/* BUTTONS N HOVER STATES*/
+.nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 28px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.nav-btn.prev {
+    background: #e0e0e0;
+    color: #444;
+    outline: none;
+}
+
+.nav-btn.next {
+    background: #333a52;
+    color: white;
+}
+
+.nav-btn.submit-btn {
+    background: #2e7d32;
+    color: white;
+}
+
+.nav-btn.next:hover {
+    background: #4a5270;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(51, 58, 82, 0.3);
+}
+
+.nav-btn.prev:hover {
+    background: #c8c8c8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.nav-btn.submit-btn:hover {
+    background: #1b5e20;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(46, 125, 50, 0.35);
+}
+
+.disabled-input {
+    background: #f0f0f0 !important;
+    color: #666 !important;
+    cursor: not-allowed !important;
+    border-color: #ccc !important;
+    pointer-events: none;
+}
+
+.bio-question {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #000;
+    margin-bottom: 12px;
+}

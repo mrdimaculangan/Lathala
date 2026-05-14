@@ -3,14 +3,17 @@ import { supabase } from '../../supabaseClient';
 import { motion } from 'framer-motion';
 import { UserAuth } from '../../context/AuthContext.jsx';
 import { Plus, Upload, ChevronRight, ChevronLeft, X } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 import Navbar from './ResearcherNavbar';
 import './ResearcherAddStudy.css';
+import Dropdown from './Dropdown.jsx';
 
 export default function ResearcherAddStudy() {
     const { firstName, lastName, dbId } = UserAuth(); // gets the current user
     const [currentStep, setCurrentStep] = useState(1);
     const [departments, setDepartments] = useState([]);
     const [hraaList, setHraalList] = useState([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const steps = [
         { id: 1, label: 'Research Information' },
@@ -42,6 +45,20 @@ export default function ResearcherAddStudy() {
             const { data: hraa } = await supabase.from('HRAAlignment').select('*');
             setDepartments(dept || []);
             setHraalList(hraa || []);
+
+            // ── HRU Generation ──
+            const { count } = await supabase
+                .from('Research')
+                .select('*', { count: 'exact', head: true });
+
+            const nextNum = String((count || 0) + 1).padStart(2, '0');
+            const now = new Date();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const yyyy = now.getFullYear();
+            const hruNo = `ITRMC-HRU${mm}${dd}${yyyy}-${nextNum}`;
+
+            setFormData(prev => ({ ...prev, hru_no: hruNo, registration_date: `${yyyy}-${mm}-${dd}` }));
         }
         fetchData();
     }, []);
@@ -94,20 +111,63 @@ export default function ResearcherAddStudy() {
         }));
     };
 
+    // Validation before submitting to see which fields are empty
+    const validateAll = () => {
+        if (!formData.title.trim()) {
+            toast.error('Section 1: Please enter the Title of Study.');
+            setCurrentStep(1); return false;
+        }
+        if (!formData.hraa_id) {
+            toast.error('Section 1: Please select an HRA Alignment.');
+            setCurrentStep(1); return false;
+        }
+        if (!formData.description.trim()) {
+            toast.error('Section 1: Please enter the HRA Alignment Description.');
+            setCurrentStep(1); return false;
+        }
+        if (!formData.department_id) {
+            toast.error('Section 2: Please select a Department.');
+            setCurrentStep(2); return false;
+        }
+        if (formData.files.length === 0) {
+            toast.error('Section 3: Please upload at least one document.');
+            setCurrentStep(3); return false;
+        }
+        if (formData.involves_bioinformatics) {
+            if (!formData.organism_name.trim()) {
+                toast.error('Section 4: Please enter the Organism Name.');
+                setCurrentStep(4); return false;
+            }
+            if (!formData.accession_number.trim()) {
+                toast.error('Section 4: Please enter the Accession Number.');
+                setCurrentStep(4); return false;
+            }
+            if (!formData.sequence_type) {
+                toast.error('Section 4: Please select a Sequence Type.');
+                setCurrentStep(4); return false;
+            }
+            if (!formData.data_source.trim()) {
+                toast.error('Section 4: Please enter the Database Source.');
+                setCurrentStep(4); return false;
+            }
+        }
+        return true;
+    };
+
     // SUBMIT ALL DATA TO SUPABASE
     const handleSubmit = async () => {
-        const hruRegex = /^ITRMC-HRU\d{8}-\d{2}$/;
-        if (!hruRegex.test(formData.hru_no)) {
-            alert("Invalid HRU Number. Format must be ITRMC-HRU[Date]-[No] (e.g. ITRMC-HRU01022025-01)");
-            return;
-        }
+        if (!validateAll()) return;
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+
+        const toastId = toast.loading('Submitting your study, please wait...');
 
         try {
             let bioId = null;
 
             // if bioinformatics applies, insert
             if (formData.involves_bioinformatics) {
-                console.log("📍 Attempting to save Bioinformatics...");
+                console.log(" Attempting to save Bioinformatics...");
                 const { data: bioData, error: bioError } = await supabase
                     .from('Bioinformatics')
                     .insert([{
@@ -120,7 +180,7 @@ export default function ResearcherAddStudy() {
                     .single();
 
                 if (bioError) {
-                    console.error("❌ Failed at Bioinformatics:", bioError);
+                    console.error(" Failed at Bioinformatics:", bioError);
                     throw bioError;
                 }
                 bioId = bioData.bioinformatics_id;
@@ -129,7 +189,7 @@ export default function ResearcherAddStudy() {
             const fullName = `${firstName} ${lastName}`;
 
             // Main research entry
-            console.log("📍 Attempting to save Main Research...");
+            console.log(" Attempting to save Main Research...");
             const { data: research, error: researchError } = await supabase
                 .from('Research')
                 .insert([{
@@ -140,13 +200,14 @@ export default function ResearcherAddStudy() {
                     hraa_id: formData.hraa_id,
                     description: formData.description,
                     researcher_id: dbId,
-                    bioinformatics_id: bioId
+                    bioinformatics_id: bioId,
+                    status: 'Ongoing TRB'
                 }])
                 .select()
                 .single();
 
             if (researchError) {
-                console.error("❌ Failed at Research Table:", researchError);
+                console.error(" Failed at Research Table:", researchError);
                 throw researchError;
             }
 
@@ -182,12 +243,14 @@ export default function ResearcherAddStudy() {
                 if (fileRecordError) throw fileRecordError;
             }
 
-            alert("Study Submitted Successfully!");
-            window.location.href = '/researcher-dashboard'; // go back to dashboard
+            // Success:
+            toast.success('Study submitted successfully!');
+            setTimeout(() => { window.location.href = '/researcher-dashboard'; }, 1500);
 
         } catch (error) {
             console.error("Submission Error:", error);
-            alert("Error submitting study: " + error.message);
+            toast.error('Error submitting study: ' + error.message);
+            setIsSubmitting(false);
         }
     };
 
@@ -196,6 +259,7 @@ export default function ResearcherAddStudy() {
 
     return (
         <div className="add-study-page">
+            <Toaster position="top-center" toastOptions={{ duration: 4000 }} />
             <Navbar />
             <div className="form-wrapper">
                 {/* BREADCRUMBS */}
@@ -229,11 +293,21 @@ export default function ResearcherAddStudy() {
                             <div className="form-grid">
                                 <div className="input-group">
                                     <label>HRU Registration No.</label>
-                                    <input name="hru_no" placeholder="Enter HRU Registration No." onChange={handleInputChange} value={formData.hru_no} />
+                                    <input
+                                        name="hru_no"
+                                        value={formData.hru_no}
+                                        readOnly
+                                        className="disabled-input"
+                                    />
                                 </div>
                                 <div className="input-group">
                                     <label>Date of Registration</label>
-                                    <input type="date" name="registration_date" onChange={handleInputChange} value={formData.registration_date} />
+                                    <input
+                                        name="registration_date"
+                                        value={formData.registration_date}
+                                        readOnly
+                                        className="disabled-input"
+                                    />
                                 </div>
                                 <div className="input-group full">
                                     <label>Title of Study</label>
@@ -241,12 +315,14 @@ export default function ResearcherAddStudy() {
                                 </div>
                                 <div className="input-group full">
                                     <label>HRA Alignment</label>
-                                    <select name="hraa_id" onChange={handleInputChange} value={formData.hraa_id}>
-                                        <option value="">Select HRA Alignment</option>
-                                        {hraaList.map(item => (
-                                            <option key={item.hraa_id} value={item.hraa_id}>{item.hraa_category}</option>
-                                        ))}
-                                    </select>
+                                    <Dropdown
+                                        options={hraaList}
+                                        value={formData.hraa_id}
+                                        onChange={(val) => setFormData(prev => ({ ...prev, hraa_id: val }))}
+                                        placeholder="Select HRA Alignment"
+                                        labelKey="hraa_category"
+                                        valueKey="hraa_id"
+                                    />
                                 </div>
                                 <div className="input-group full">
                                     <label>HRA Alignment Description</label>
@@ -299,12 +375,14 @@ export default function ResearcherAddStudy() {
                                 </button>
                                 <div className="input-group full">
                                     <label>Department</label>
-                                    <select name="department_id" onChange={handleInputChange} value={formData.department_id}>
-                                        <option value="">Choose Department</option>
-                                        {departments.map(d => (
-                                            <option key={d.department_id} value={d.department_id}>{d.department_name}</option>
-                                        ))}
-                                    </select>
+                                    <Dropdown
+                                        options={departments}
+                                        value={formData.department_id}
+                                        onChange={(val) => setFormData(prev => ({ ...prev, department_id: val }))}
+                                        placeholder="Choose Department"
+                                        labelKey="department_name"
+                                        valueKey="department_id"
+                                    />
                                 </div>
                             </div>
                         )}
@@ -314,11 +392,15 @@ export default function ResearcherAddStudy() {
                             <div className="form-grid">
                                 <div className="input-group full">
                                     <label>Upload Documents</label>
+                                    <p className="file-hint">
+                                        <em>Accepted formats: PDF, JPG, PNG, PPTX, DOCX</em>
+                                    </p>
                                     {/* Hidden standard file input */}
                                     <input
                                         type="file"
                                         id="file-upload"
                                         style={{ display: 'none' }}
+                                        accept=".pdf,.jpg,.jpeg,.png,.pptx,.docx"
                                         onChange={handleFileChange}
                                     />
                                     <button
@@ -348,8 +430,6 @@ export default function ResearcherAddStudy() {
                                                     >
                                                         <option value="Research Paper">Research Paper</option>
                                                         <option value="PPT">Presentation (PPT)</option>
-                                                        <option value="Poster">Poster</option>
-                                                        <option value="Other">Other</option>
                                                     </select>
                                                     <button
                                                         type="button"
@@ -370,38 +450,25 @@ export default function ResearcherAddStudy() {
                         {currentStep === 4 && (
                             <div className="form-grid">
                                 <div className="input-group full">
-                                    <label style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '10px' }}>
-                                        Does your study involve Bioinformatics?
-                                    </label>
-                                    <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                                            <input
-                                                type="radio"
-                                                name="involves_bioinformatics"
-                                                checked={formData.involves_bioinformatics === true}
-                                                onChange={() => setFormData(prev => ({ ...prev, involves_bioinformatics: true }))}
-                                                style={{ width: '18px', height: '18px' }}
-                                            />
+                                    <p className="bio-question">Does your study involve Bioinformatics?</p>
+                                    <div className="bio-button-group">
+                                        <button
+                                            type="button"
+                                            className={`bio-btn ${formData.involves_bioinformatics === true ? 'active' : ''}`}
+                                            onClick={() => setFormData(prev => ({ ...prev, involves_bioinformatics: true }))}
+                                        >
                                             Yes
-                                        </label>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                                            <input
-                                                type="radio"
-                                                name="involves_bioinformatics"
-                                                checked={formData.involves_bioinformatics === false}
-                                                onChange={() => setFormData(prev => ({
-                                                    ...prev,
-                                                    involves_bioinformatics: false,
-                                                    // Clear fields if they change their mind to "No"
-                                                    organism_name: '',
-                                                    accession_number: '',
-                                                    sequence_type: '',
-                                                    data_source: ''
-                                                }))}
-                                                style={{ width: '18px', height: '18px' }}
-                                            />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`bio-btn ${formData.involves_bioinformatics === false ? 'active' : ''}`}
+                                            onClick={() => setFormData(prev => ({
+                                                ...prev, involves_bioinformatics: false,
+                                                organism_name: '', accession_number: '', sequence_type: '', data_source: ''
+                                            }))}
+                                        >
                                             No
-                                        </label>
+                                        </button>
                                     </div>
                                 </div>
 
@@ -428,13 +495,18 @@ export default function ResearcherAddStudy() {
                                         </div>
                                         <div className="input-group full">
                                             <label>Sequence Type</label>
-                                            <select name="sequence_type" onChange={handleInputChange} value={formData.sequence_type}>
-                                                <option value="">Select Sequence Type</option>
-                                                <option value="DNA">DNA</option>
-                                                <option value="RNA">RNA</option>
-                                                <option value="Protein">Protein</option>
-                                                <option value="Other">Other</option>
-                                            </select>
+                                            <Dropdown
+                                                options={[
+                                                    { label: 'DNA', value: 'DNA' },
+                                                    { label: 'RNA', value: 'RNA' },
+                                                    { label: 'Protein', value: 'Protein' },
+                                                ]}
+                                                value={formData.sequence_type}
+                                                onChange={(val) => setFormData(prev => ({ ...prev, sequence_type: val }))}
+                                                placeholder="Select Sequence Type"
+                                                labelKey="label"
+                                                valueKey="value"
+                                            />
                                         </div>
                                         <div className="input-group full">
                                             <label>Database Source</label>
@@ -464,8 +536,13 @@ export default function ResearcherAddStudy() {
                                 Next <ChevronRight size={18} />
                             </button>
                         ) : (
-                            <button className="nav-btn next submit-btn" onClick={handleSubmit}>
-                                Submit Study
+                            <button
+                                className="nav-btn next submit-btn"
+                                onClick={handleSubmit}
+                                disabled={isSubmitting}
+                                style={{ opacity: isSubmitting ? 0.6 : 1, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
+                            >
+                                {isSubmitting ? 'Submitting...' : 'Submit Study'}
                             </button>
                         )}
                     </div>

@@ -106,30 +106,37 @@ body {
 
 /* Second row */
 .second-row {
-    display: grid;
-    grid-template-columns: 60% 1fr;
+    display: flex;
+    justify-content: center;
     gap: 2rem;
     width: 100%;
     margin-top: 2rem;
-    align-items: start;
+    align-items: flex-start;
 }
 
 .studies-section {
+    flex: 2;
+    min-width: 300px;
     background: white;
-    margin-top: 3rem;
     padding: 2rem;
     border-radius: 20px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    max-height: 500px;
+    display: flex;
+    flex-direction: column;
 }
 
 .calendar-section {
+    flex: 1;
+    min-width: 280px;
     background: white;
     border-radius: 20px;
-    padding: 2rem;
+    padding: 1.5rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    gap: 1.5rem;
+    align-self: flex-start;    /* stops it from stretching to table height */
 }
 
 
@@ -140,7 +147,8 @@ body {
 }
 
 .table-responsive {
-    overflow-x: auto;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .studies-table {

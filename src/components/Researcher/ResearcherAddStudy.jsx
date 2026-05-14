@@ -201,7 +201,7 @@ export default function ResearcherAddStudy() {
                     description: formData.description,
                     researcher_id: dbId,
                     bioinformatics_id: bioId,
-                    status: 'Ongoing TRB'
+                    status: 'Pending'
                 }])
                 .select()
                 .single();

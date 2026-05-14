@@ -1,0 +1,328 @@
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600&display=swap');
+
+/* Page header — centered */
+.alog-page-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.alog-page-header h1 {
+    font-family: 'Crimson Text', serif;
+    font-size: 48px;
+    color: #031640;
+    margin-bottom: 0.4rem;
+}
+
+.alog-page-header p {
+    color: #64748b;
+    font-size: 0.95rem;
+}
+
+/* Card */
+.alog-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    overflow: hidden;
+    width: 100%;
+}
+
+/* Toolbar */
+.alog-toolbar {
+    background: #050255;
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.alog-search {
+    background: white;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 0.875rem;
+    width: 340px;
+    outline: none;
+    color: #1e293b;
+}
+
+.alog-search::placeholder {
+    color: #94a3b8;
+}
+
+/* Table columns — 5 columns with proper spacing */
+.alog-table-head,
+.alog-row {
+    display: grid;
+    grid-template-columns: 200px 180px 1fr 140px 200px;
+    padding: 14px 2rem;
+    align-items: center;
+    gap: 1rem;
+}
+
+.alog-table-head {
+    background: #2d365a;
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.alog-row {
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s;
+}
+
+.alog-row:last-child {
+    border-bottom: none;
+}
+
+.alog-row:hover {
+    background: #f8fafc;
+}
+
+/* Status badge */
+.alog-status-badge {
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    width: fit-content;
+    white-space: nowrap;
+}
+
+/* HRU number */
+.alog-hru {
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: #475569;
+}
+
+/* Title cell — title + action tag stacked */
+.alog-title-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow: hidden;
+}
+
+.alog-research-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #0f172a;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.alog-action-tag {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    text-transform: capitalize;
+    font-style: italic;
+}
+
+/* Date */
+.alog-date {
+    font-size: 0.78rem;
+    color: #64748b;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Action button */
+.alog-action-btn {
+    background: none;
+    border: none;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #011a39;
+    cursor: default;
+    text-align: left;
+    letter-spacing: 0.03em;
+    padding: 0;
+    white-space: nowrap;
+}
+
+.alog-action-link {
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: opacity 0.15s;
+}
+
+.alog-action-link:hover {
+    opacity: 0.75;
+}
+
+/* Empty state */
+.alog-empty {
+    padding: 3rem 2rem;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+
+/* Modal reuse from dashboard */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-content {
+    background: white;
+    width: 100%;
+    max-width: 680px;
+    max-height: 90vh;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+    animation: modalFadeIn 0.25s ease;
+    overflow: hidden;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.modal-header h2 {
+    margin: 0 0 4px 0;
+    font-size: 1.15rem;
+    color: #0f172a;
+    line-height: 1.4;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #64748b;
+    flex-shrink: 0;
+    transition: color 0.2s;
+    padding: 2px;
+}
+
+.close-btn:hover { color: #dc2626; }
+
+.modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.detail-section {
+    margin-bottom: 24px;
+}
+
+.detail-section h3 {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 8px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+}
+
+.detail-item label {
+    display: block;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+
+.detail-item p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #0f172a;
+    font-weight: 500;
+}
+
+/* Evaluator notes box */
+.evaluator-notes-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: #334155;
+    white-space: pre-wrap;
+}
+
+/* Status messages */
+.status-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.status-message p { margin: 0; }
+
+.status-message.approved {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.status-message.rejected {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+/* Edit/revision button */
+.edit-submission-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: #031640;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-align: center;
+}
+
+.edit-submission-btn:hover {
+    background: #1b2c5e;
+}

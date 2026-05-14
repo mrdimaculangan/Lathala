@@ -155,6 +155,7 @@ function EvaluateResearch() {
         }));
     };
 
+    // updated handle submit for flow -> will notify and update activity log
     const handleSubmit = async (event) => {
         event.preventDefault();
         if (submitting) return;
@@ -173,22 +174,96 @@ function EvaluateResearch() {
         setSubmitting(true);
 
         try {
-            const { error } = await supabase
+            const statusMap = {
+                'Approved':       'Approved',
+                'Minor_revision': 'With Minor Revisions',
+                'Major_revision': 'With Major Revisions',
+                'Rejected':       'Rejected',
+            };
+            const newStatus = statusMap[evaluation.recommendation];
+
+            // insert evaluation record
+            const { error: evalError } = await supabase
                 .from('Evaluation_Research')
                 .insert([{
-                    research_id: Number(researchId),
-                    evaluator_id: Number(dbId),
-                    sci_rigor: Number(evaluation.scientificRigor),
-                    relevant_to_hru_obj: Number(evaluation.relevance),
-                    ethical_compliance: Number(evaluation.ethicalCompliance),
-                    methodology: evaluation.methodology,
-                    strengths: evaluation.strengths,
-                    weaknesses: evaluation.weaknesses,
+                    research_id:            Number(researchId),
+                    evaluator_id:           Number(dbId),
+                    sci_rigor:              Number(evaluation.scientificRigor),
+                    relevant_to_hru_obj:    Number(evaluation.relevance),
+                    ethical_compliance:     Number(evaluation.ethicalCompliance),
+                    methodology:            evaluation.methodology,
+                    strengths:              evaluation.strengths,
+                    weaknesses:             evaluation.weaknesses,
                     overall_recommendation: evaluation.recommendation,
-                    additional_comments: evaluation.overallComments
+                    additional_comments:    evaluation.overallComments
                 }]);
 
-            if (error) throw error;
+            if (evalError) throw evalError;
+
+            // update RESEARCH status
+            const { error: statusError } = await supabase
+                .from('Research')
+                .update({ status: newStatus })
+                .eq('research_id', Number(researchId));
+
+            if (statusError) throw statusError;
+
+            // write to activity log
+            const notesText = [
+                evaluation.overallComments,
+                evaluation.strengths ? `Strengths: ${evaluation.strengths}` : null,
+                evaluation.weaknesses ? `Weaknesses: ${evaluation.weaknesses}` : null,
+            ].filter(Boolean).join('\n\n') || 'No additional comments provided.';
+
+            const { data: logData, error: logError } = await supabase
+                .from('ResearchActivityLog')
+                .insert([{
+                    research_id: Number(researchId),
+                    actor_id:    Number(dbId),
+                    actor_role:  'evaluator',
+                    action:      'evaluated',
+                    notes:       notesText,
+                }])
+                .select()
+                .single();
+
+            if (logError) throw logError;
+
+            // get researcher's auth UUID from the already-fetched research object
+            const researcherAuthUUID = research.Researcher?.User?.user_id;
+
+            if (!researcherAuthUUID) {
+                // Fallback: fetch it directly if join didn't populate
+                const { data: researcherData, error: researcherError } = await supabase
+                    .from('Researcher')
+                    .select('user_id')
+                    .eq('researcher_id', research.researcher_id)
+                    .single();
+
+                if (researcherError || !researcherData) throw new Error("Could not find researcher to notify.");
+
+                const { error: notifError } = await supabase
+                    .from('researcher_notifications')
+                    .insert([{
+                        recipient_id: researcherData.user_id,
+                        research_id:  Number(researchId),
+                        log_id:       logData.log_id,
+                        message:      `Your research "${research.title}" has been evaluated. Status: ${newStatus}.`,
+                    }]);
+
+                if (notifError) throw notifError;
+            } else {
+                const { error: notifError } = await supabase
+                    .from('researcher_notifications')
+                    .insert([{
+                        recipient_id: researcherAuthUUID,
+                        research_id:  Number(researchId),
+                        log_id:       logData.log_id,
+                        message:      `Your research "${research.title}" has been evaluated. Status: ${newStatus}.`,
+                    }]);
+
+                if (notifError) throw notifError;
+            }
 
             alert('Evaluation submitted successfully.');
             navigate('/evaluator-dashboard');

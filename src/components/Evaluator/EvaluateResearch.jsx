@@ -1,12 +1,15 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { UserAuth } from "../../context/AuthContext";
 import { supabase } from "../../supabaseClient";
 import Navbar from "./EvaluatorNavbar";
+import { FileText } from "lucide-react"; // ✅ ADD THIS IMPORT
 import "./EvaluateResearch.css";
 
 function EvaluateResearch() {
     const { researchId } = useParams();
     const navigate = useNavigate();
+    const { dbId } = UserAuth();
     const leftCardRef = useRef(null);
     const [leftCardHeight, setLeftCardHeight] = useState(0);
     const [research, setResearch] = useState(null);
@@ -24,7 +27,9 @@ function EvaluateResearch() {
     });
 
     useEffect(() => {
-        fetchResearchDetails();
+        if (researchId) {
+            fetchResearchDetails();
+        }
     }, [researchId]);
 
     useLayoutEffect(() => {
@@ -39,21 +44,109 @@ function EvaluateResearch() {
         return () => window.removeEventListener('resize', updateHeight);
     }, [loading, research]);
 
-    async function fetchResearchDetails() {
-        setLoading(true);
-        const { data, error } = await supabase
+  const fetchResearchDetails = async () => {
+    try {
+        const { data: basicData, error: basicError } = await supabase
             .from('Research')
             .select('*')
             .eq('research_id', researchId)
             .single();
+        
+        if (basicError) {
+            console.error('Error fetching basic research:', basicError);
+            setResearch(null);
+            setLoading(false);
+            return;
+        }
+        
+        if (!basicData) {
+            console.log('❌ No research found with ID:', researchId);
+            setResearch(null);
+            setLoading(false);
+            return;
+        }
+
+        const { data, error } = await supabase
+            .from('Research')
+            .select(`
+                *,
+                research_files ( 
+                    file_url, 
+                    file_type,
+                    file_name 
+                ),
+                Researcher:researcher_id (
+                    researcher_id,
+                    user_id,
+                    User:user_id (
+                        first_name,
+                        last_name,
+                        email
+                    )
+                )
+            `)
+            .eq('research_id', researchId)
+            .single();
+
+        console.log('Full research data:', data);
+        console.log('Full research error:', error);
 
         if (error) {
-            console.error('Error fetching research:', error);
-        } else {
-            setResearch(data);
+            console.error('Error fetching full research:', error);
+            // Use basic data if join fails
+            setResearch(basicData);
+            setLoading(false);
+            return;
         }
+        
+        if (data) {
+            const researcher = data.Researcher;
+            const user = researcher?.User;
+            
+            data.author = user 
+                ? `${user.first_name || ''} ${user.last_name || ''}`.trim() 
+                : 'Unknown Author';
+            data.author_email = user?.email || 'No email';
+        }
+        
+        setResearch(data || basicData);
+    } catch (error) {
+        console.error("Error fetching research details:", error);
+        setResearch(null);
+    } finally {
         setLoading(false);
     }
+};
+
+    const getCleanFileName = (url) => {
+        if (!url) return "Unknown File";
+        const parts = url.split('/');
+        const fileWithTimestamp = parts[parts.length - 1];
+        const cleanName = fileWithTimestamp.split('_').slice(1).join('_');
+        return cleanName || fileWithTimestamp;
+    };
+
+    const handleDownload = async (fileUrl, fileName) => {
+        try {
+            const { data, error } = await supabase.storage
+                .from('research-files')
+                .download(fileUrl);
+
+            if (error) throw error;
+
+            const url = window.URL.createObjectURL(data);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName || 'research-file';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Error downloading file:", error);
+            window.open(fileUrl, '_blank');
+        }
+    };
 
     const handleChange = (field) => (event) => {
         setEvaluation((prev) => ({
@@ -64,7 +157,6 @@ function EvaluateResearch() {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-
         if (submitting) return;
 
         if (
@@ -81,12 +173,29 @@ function EvaluateResearch() {
         setSubmitting(true);
 
         try {
-            console.log('Submitting evaluation for research:', researchId, evaluation);
+            const { error } = await supabase
+                .from('Evaluation_Research')
+                .insert([{
+                    research_id: Number(researchId),
+                    evaluator_id: Number(dbId),
+                    sci_rigor: Number(evaluation.scientificRigor),
+                    relevant_to_hru_obj: Number(evaluation.relevance),
+                    ethical_compliance: Number(evaluation.ethicalCompliance),
+                    methodology: evaluation.methodology,
+                    strengths: evaluation.strengths,
+                    weaknesses: evaluation.weaknesses,
+                    overall_recommendation: evaluation.recommendation,
+                    additional_comments: evaluation.overallComments
+                }]);
+
+            if (error) throw error;
+
             alert('Evaluation submitted successfully.');
             navigate('/evaluator-dashboard');
+
         } catch (error) {
-            console.error('Error submitting evaluation:', error);
-            alert('There was a problem submitting the evaluation. Please try again.');
+            console.error('Submission Error:', error);
+            alert(`Submission Error: ${error.message}`);
         } finally {
             setSubmitting(false);
         }
@@ -120,6 +229,7 @@ function EvaluateResearch() {
                 </section>
 
                 <div className="evaluate-grid">
+                    {/* Left sidebar with research summary */}
                     <aside ref={leftCardRef} className="research-summary-card">
                         <div className="summary-header">
                             <span className="summary-status">
@@ -152,9 +262,43 @@ function EvaluateResearch() {
                                 <strong>HRA Alignment</strong>
                                 <span>{research.hra_alignment || 'Not provided'}</span>
                             </div>
-                            <div className="summary-row summary-row--full">
-                                <strong>Alignment Summary</strong>
-                                <span>{research.hra_description || research.alignment_description || 'No alignment summary available.'}</span>
+                        </div>
+
+                        {/* Research Files Section - NEW */}
+                        <div className="research-files-section">
+                            <h3>Submitted Files</h3>
+                            <div className="file-list">
+                                {research.research_files && research.research_files.length > 0 ? (
+                                    research.research_files.map((file, index) => (
+                                        <div key={index} className="file-item">
+                                            <FileText size={18} />
+                                            <div className="file-details">
+                                                <span className="file-name">
+                                                    {getCleanFileName(file.file_url)}
+                                                </span>
+                                                <span className="file-type">{file.file_type}</span>
+                                            </div>
+                                            <div className="file-buttons">
+                                                <button 
+                                                    className="icon-btn"
+                                                    onClick={() => window.open(file.file_url, '_blank')}
+                                                    title="Preview"
+                                                >
+                                                    👁️
+                                                </button>
+                                                <button 
+                                                    className="icon-btn"
+                                                    onClick={() => handleDownload(file.file_url, getCleanFileName(file.file_url))}
+                                                    title="Download"
+                                                >
+                                                    📥
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="no-files">No files submitted</p>
+                                )}
                             </div>
                         </div>
                     </aside>
@@ -283,10 +427,10 @@ function EvaluateResearch() {
                                         onChange={handleChange('recommendation')}
                                     >
                                         <option value="">Select recommendation</option>
-                                        <option value="approve">Approve</option>
-                                        <option value="minor_revision">Minor Revision</option>
-                                        <option value="major_revision">Major Revision</option>
-                                        <option value="reject">Reject</option>
+                                        <option value="Approved">Approved</option>
+                                        <option value="Minor_revision">Minor Revision</option>
+                                        <option value="Major_revision">Major Revision</option>
+                                        <option value="Rejected">Reject</option>
                                     </select>
                                 </div>
 

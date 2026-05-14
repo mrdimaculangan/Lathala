@@ -7,7 +7,7 @@ import "./EvaluatorDashboard.css";
 
 async function fetchResearches() {
   const { data, error } = await supabase
-    .from('Research')
+    .from('research_with_authors')
     .select('*');
   
   if (error) {
@@ -15,8 +15,14 @@ async function fetchResearches() {
     return [];
   }
   
-  console.log('Available columns:', Object.keys(data[0] || {}));
-  return data;
+  // Format with consistent property names
+  const formattedData = data.map(research => ({
+    ...research,
+    author: research.author_name || 'Unknown Author',
+    author_email: research.author_email || 'No email',
+  }));
+  
+  return formattedData;
 }
 
 function EvaluatorDashboard() {
@@ -43,17 +49,44 @@ function EvaluatorDashboard() {
     
 
     const getStatusBadge = (status) => {
-        switch(status) {
+        // Convert to lowercase for case-insensitive comparison
+        const normalizedStatus = status?.toLowerCase() || 'pending';
+        
+        switch(normalizedStatus) {
             case 'pending':
-                return <span className="status-badge status-pending">Pending</span>;
+                return <span className="status-badge status-pending">
+                    <Clock size={14} className="status-icon" /> Pending
+                </span>;
             case 'reviewed':
-                return <span className="status-badge status-reviewed">Reviewed</span>;
+                return <span className="status-badge status-reviewed">
+                    <FileText size={14} className="status-icon" /> Reviewed
+                </span>;
             case 'approved':
-                return <span className="status-badge status-approved">Approved</span>;
+                return <span className="status-badge status-approved">
+                    <CheckCircle size={14} className="status-icon" /> Approved
+                </span>;
             case 'rejected':
-                return <span className="status-badge status-rejected">Rejected</span>;
+                return <span className="status-badge status-rejected">
+                    <XCircle size={14} className="status-icon" /> Rejected
+                </span>;
+            case 'minor_revision':
+                return <span className="status-badge status-revision">
+                    <FileText size={14} className="status-icon" /> Needs Minor Revision
+                </span>;
+            case 'major_revision':
+                return <span className="status-badge status-revision">
+                    <FileText size={14} className="status-icon" /> Needs Major Revision
+                </span>;
             default:
-                return <span className="status-badge status-pending">Pending</span>;
+                // If status exists but doesn't match any case, display it as-is
+                if (status) {
+                    return <span className="status-badge status-pending">
+                        {status}
+                    </span>;
+                }
+                return <span className="status-badge status-pending">
+                    <Clock size={14} className="status-icon" /> Pending
+                </span>;
         }
     };
 
@@ -83,23 +116,31 @@ function EvaluatorDashboard() {
     };
 
 
-    const filteredResearches = researches.filter(research => {
-        if (searchTerm) {
-            const searchLower = searchTerm.toLowerCase();
-            return research.title.toLowerCase().includes(searchLower) ||
-                   research.author.toLowerCase().includes(searchLower);
-        }
-        return true;
+    const pendingResearches = researches.filter(research => {
+        const status = research.status?.toLowerCase();
+        return status === 'pending';
     });
+    // Case-insensitive status counting
+    const pendingCount = researches.filter(r => 
+        r.status?.toLowerCase() === 'pending'
+    ).length;
 
-    const pendingCount = researches.filter(r => r.status === 'pending').length;
-    const approvedCount = researches.filter(r => r.status === 'approved').length;
-    const rejectedCount = researches.filter(r => r.status === 'rejected').length;
+    const approvedCount = researches.filter(r => 
+        r.status?.toLowerCase() === 'approved'
+    ).length;
 
-    // Calendar generation
-    const getDaysInMonth = (year, month) => {
-        return new Date(year, month + 1, 0).getDate();
-    };
+    const rejectedCount = researches.filter(r => 
+        r.status?.toLowerCase() === 'rejected'
+    ).length;
+
+    // Optional: Add reviewed count if you use it
+    const reviewedCount = researches.filter(r => 
+        r.status?.toLowerCase() === 'reviewed'
+    ).length;
+        // Calendar generation
+        const getDaysInMonth = (year, month) => {
+            return new Date(year, month + 1, 0).getDate();
+        };
 
     const getFirstDayOfMonth = (year, month) => {
         return new Date(year, month, 1).getDay();
@@ -144,12 +185,11 @@ function EvaluatorDashboard() {
         );
     };
 
-    return (
+   return (
         <div className="dashboard-wrapper">
             <Navbar />
             
             <main className="dashboard-container">
-                {/* First Row: Title and Stats - Centered together */}
                 <div className="first-row">
                     <div className="title-section">
                         <h1>Evaluator Dashboard</h1>
@@ -164,17 +204,23 @@ function EvaluatorDashboard() {
                         <div className="stat-item">
                             <FileText size={45} className="research-icon" />
                             <span className="stat-label">PENDING <br /> RESEARCHES</span>
-                            <span className="stat-number">{pendingCount}</span>
+                            <span className="stat-number">
+                                {researches.filter(r => r.status?.toLowerCase() === 'pending').length}
+                            </span>
                         </div>
                         <div className="stat-item">
                             <CheckCircle size={45} className="research-icon" />
                             <span className="stat-label">APPROVED <br /> RESEARCHES</span>
-                            <span className="stat-number">{approvedCount}</span>
+                            <span className="stat-number">
+                                {researches.filter(r => r.status?.toLowerCase() === 'approved').length}
+                            </span>
                         </div>
                         <div className="stat-item">
                             <XCircle size={45} className="research-icon" />
                             <span className="stat-label">REJECTED <br /> RESEARCHES</span>
-                            <span className="stat-number">{rejectedCount}</span>
+                            <span className="stat-number">
+                                {researches.filter(r => r.status?.toLowerCase() === 'rejected').length}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -198,14 +244,14 @@ function EvaluatorDashboard() {
                             </div>
                             {loading ? (
                                 <div className="loading-state">Loading...</div>
-                            ) : filteredResearches.length === 0 ? (
-                                <div className="empty-state">No researches found</div>
+                            ) : pendingResearches.length === 0 ? (
+                                <div className="empty-state">No pending researches found</div>
                             ) : (
-                                filteredResearches.slice(0, 5).map((research, index) => (
+                                pendingResearches.slice(0, 5).map((research, index) => (
                                     <div 
-                                        key={research.id} 
+                                        key={research.id || research.research_id} 
                                         className="table-row" 
-                                        onClick={() => handleResearchClick(research)} // Pass the whole research object
+                                        onClick={() => handleResearchClick(research)}
                                         style={{ cursor: 'pointer' }}
                                     >
                                         <div className="hru-number">HRU-{String(index + 1).padStart(3, '0')}</div>
@@ -264,15 +310,21 @@ function EvaluatorDashboard() {
                                         <p>{selectedResearch.author || 'N/A'}</p>
                                     </div>
                                     <div className="modal-field-half">
+                                        <label>Email:</label>
+                                        <p>{selectedResearch.author_email || 'N/A'}</p>
+                                    </div>
+                                </div>
+
+                                {/* 4th Row: Email and HRU Number (side by side) */}
+                                <div className="modal-row-two">
+                                    <div className="modal-field-half">
                                         <label>Submission Date:</label>
                                         <p>{formatDate(selectedResearch.registration_date || selectedResearch.submission_date)}</p>
                                     </div>
-                                </div>
-                                
-                                {/* 4th Row: HRU Number */}
-                                <div className="modal-field">
-                                    <label>HRU Number:</label>
-                                    <p>{selectedResearch.hru_no || 'N/A'}</p>
+                                    <div className="modal-field-half">
+                                        <label>HRU Number:</label>
+                                        <p>{selectedResearch.hru_no || 'N/A'}</p>
+                                    </div>
                                 </div>
                             </div>
                             

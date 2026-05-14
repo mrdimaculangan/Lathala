@@ -2,13 +2,25 @@ import { Link, NavLink } from 'react-router-dom';
 import Logout from '../Logout';
 import './EvaluatorNavbar.css';
 import { UserAuth } from '../../context/AuthContext';
-import { Search, User, LayoutGrid, FileText, FilePlus2, Users, History, Settings, LogOut, Menu } from 'lucide-react';
+import { Search, User, LayoutGrid, FileText, FilePlus2, Users, History, Settings, LogOut, Menu, Bell} from 'lucide-react';
 import logoImg from '../../assets/logo.png';
+import { useState } from 'react';
 
 export default function EvaluatorNavbar() {
-
+    const [showNotificationPopup, setShowNotificationPopup] = useState(false); 
     const { firstName, lastName, session, userRole } = UserAuth();
     const displayName = firstName ? `${firstName} ${lastName}` : session?.user?.email;
+
+    const toggleNotificationPopup = () => {
+        setShowNotificationPopup(!showNotificationPopup);
+    }
+
+    const [activeTab, setActiveTab] = useState('recent');
+
+    const handleTabChange = (tab) => {
+        setActiveTab(tab);
+    }
+
 
     return (
         <>
@@ -28,6 +40,15 @@ export default function EvaluatorNavbar() {
                 </section>
 
                 <section className='navbar-group-right'>
+                    <button
+                        className='notification-button'
+                        onClick={toggleNotificationPopup}
+                        aria-label="Notifications"
+                    >
+                        <Bell size={20} />
+                    </button>
+
+
                     <aside className='user-profile'>
                         <div className="avatar-placeholder">
                             <User size={20} />
@@ -60,12 +81,6 @@ export default function EvaluatorNavbar() {
                             <NavLink to="/review-queue" className='sidebar-link'>
                                 <FilePlus2 size={22} className='sidebar-icon' />
                                 <span className='sidebar-text'>Review Queue</span>
-                            </NavLink>
-                        </li>
-                        <li>
-                            <NavLink to="/user-management" className='sidebar-link'>
-                                <Users size={22} className='sidebar-icon' />
-                                <span className='sidebar-text'>User Management</span>
                             </NavLink>
                         </li>
                         <li>

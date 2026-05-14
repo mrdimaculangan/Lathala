@@ -225,3 +225,341 @@
     cursor: pointer;
     margin: 0 15px;
 }
+
+/* Notifications CSS */
+/* Notification Button Styles */
+.notification-button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    margin-right: 16px;
+    color: #4b5563;
+    position: relative;
+}
+
+.notification-button:hover {
+    background-color: #f3f4f6;
+    transform: scale(1.05);
+}
+
+.notification-button:active {
+    transform: scale(0.95);
+}
+
+/* Popup Overlay - Darker Gradient Background */
+.notification-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0.85) 100%);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+}
+
+/* Popup Container */
+.notification-popup {
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+    overflow: hidden;
+}
+
+/* Popup Header - Group with X button and Title */
+.popup-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    background: white;
+}
+
+.popup-header h3 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1.25rem;
+    font-weight: 600;
+    flex: 1;
+}
+
+/* Close Button */
+.popup-close-button {
+    background: #f3f4f6;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #4b5563;
+    transition: all 0.2s ease;
+}
+
+.popup-close-button:hover {
+    background-color: #e5e7eb;
+    transform: rotate(90deg);
+}
+
+.popup-close-button:active {
+    transform: rotate(90deg) scale(0.95);
+}
+
+/* Tabs Styles */
+.notification-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 12px 24px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.tab-button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6b7280;
+    transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+.tab-button.active {
+    background: white;
+    color: #30336b;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Popup Content */
+.popup-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.tab-content {
+    display: none;
+    padding: 16px 24px;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Notification List */
+.notification-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.notification-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: white;
+    transition: all 0.2s ease;
+    border: 1px solid #f3f4f6;
+    margin-bottom: 8px; /* Added spacing between items */
+}
+
+.notification-item:hover {
+    border-color: #e5e7eb;
+    background: #f9fafb;
+}
+
+/* Container for text and buttons */
+.notification-content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.notification-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* Button Group Styling */
+.notification-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.action-btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+/* 1. Delete Button */
+.btn-delete {
+    background-color: #fef2f2;
+    color: #dc2626;
+}
+.btn-delete:hover {
+    background-color: #fee2e2;
+}
+
+/* 2. View Button (Placeholder style) */
+.btn-view {
+    background-color: #eff6ff;
+    color: #2563eb;
+}
+.btn-view:hover {
+    background-color: #dbeafe;
+}
+
+/* 3. Mark as Read Button */
+.btn-mark-read {
+    background-color: #f0fdf4;
+    color: #16a34a;
+}
+.btn-mark-read:hover {
+    background-color: #dcfce7;
+}
+
+.notification-item.unread {
+    background: #1270db36;
+    border-color: #5a8bc7;
+}
+
+.notification-icon {
+    font-size: 20px;
+    min-width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    border-radius: 8px;
+}
+
+.notification-details {
+    flex: 1;
+}
+
+.notification-message {
+    margin: 0 0 4px 0;
+    color: #1f2937;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.notification-time {
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: #9ca3af;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Scrollbar Styling */
+.popup-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.popup-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.popup-content::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.popup-content::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .notification-popup {
+        width: 95%;
+        max-height: 90vh;
+    }
+    
+    .popup-header {
+        padding: 16px 20px;
+    }
+    
+    .notification-tabs {
+        padding: 8px 20px;
+    }
+    
+    .tab-content {
+        padding: 12px 20px;
+    }
+    
+    .notification-item {
+        padding: 10px;
+    }
+}

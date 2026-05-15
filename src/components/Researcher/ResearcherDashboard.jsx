@@ -16,6 +16,7 @@ export default function ResearcherDashboard() {
 
     const [studies, setStudies] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
 
     const [selectedStudy, setSelectedStudy] = useState(null);
     const [studyDetails, setStudyDetails] = useState({coauthors: [], bio: null, dept: null, hraa: null});
@@ -26,32 +27,60 @@ export default function ResearcherDashboard() {
     const getDaysInMonth = (year, month) => {
         return new Date(year, month + 1, 0).getDate();
     };
+    // NEW: Additional for the calendar hover kineme
+    const [submissionDates, setSubmissionDates] = useState({});
+    const [calendarModal, setCalendarModal] = useState(null);
+
 
     const getFirstDayOfMonth = (year, month) => {
         return new Date(year, month, 1).getDay();
     };
 
+    // NEW: Render Calendar
     const renderCalendar = () => {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
         const daysInMonth = getDaysInMonth(year, month);
         const firstDay = getFirstDayOfMonth(year, month);
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const monthNames = ['January','February','March','April','May','June',
+            'July','August','September','October','November','December'];
 
         const days = [];
         for (let i = 0; i < firstDay; i++) {
             days.push(<div key={`empty-${i}`} className="calendar-day empty"></div>);
         }
+
         for (let i = 1; i <= daysInMonth; i++) {
             const isToday = i === new Date().getDate() &&
                 year === new Date().getFullYear() &&
                 month === new Date().getMonth();
+
+            const mm = String(month + 1).padStart(2, '0');
+            const dd = String(i).padStart(2, '0');
+            const dateKey = `${year}-${mm}-${dd}`;
+            const dayStudies = submissionDates[dateKey];
+            const hasSubmissions = dayStudies && dayStudies.length > 0;
+
             days.push(
-                <div key={i} className={`calendar-day ${isToday ? 'today' : ''}`}>
+                <div
+                    key={i}
+                    className={`calendar-day ${isToday ? 'today' : ''} ${hasSubmissions ? 'has-submissions' : ''}`}
+                    onClick={() => hasSubmissions && setCalendarModal({
+                        date: new Date(year, month, i).toLocaleDateString('en-US', {
+                            month: 'long', day: 'numeric', year: 'numeric'
+                        }),
+                        studies: dayStudies
+                    })}
+                    title={hasSubmissions ? `${dayStudies.length} submission(s)` : undefined}
+                >
                     {i}
+                    {hasSubmissions && (
+                        <span className="calendar-dot">{dayStudies.length}</span>
+                    )}
                 </div>
             );
         }
+
         return (
             <div className="calendar">
                 <div className="calendar-header">
@@ -62,9 +91,7 @@ export default function ResearcherDashboard() {
                 <div className="calendar-weekdays">
                     <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
                 </div>
-                <div className="calendar-days">
-                    {days}
-                </div>
+                <div className="calendar-days">{days}</div>
             </div>
         );
     };
@@ -91,6 +118,28 @@ export default function ResearcherDashboard() {
 
                     if (error) throw error;
                     setStudies(data || []);
+
+                    const allStudies = data || [];
+                    setStats({
+                        total:    allStudies.length,
+                        pending:  allStudies.filter(s => s.status?.trim() === 'Pending').length,
+                        approved: allStudies.filter(s => s.status?.trim() === 'Approved').length,
+                        rejected: allStudies.filter(s => s.status?.trim() === 'Rejected').length,
+                    });
+
+                    // NEW: Build submission date map
+                    const dateMap = {};
+                    (data || []).forEach(study => {
+                        const dateKey = new Date(study.created_at).toISOString().split('T')[0];
+                        if (!dateMap[dateKey]) dateMap[dateKey] = [];
+                        dateMap[dateKey].push({
+                            title: study.title,
+                            created_at: study.created_at,
+                            research_id: study.research_id,
+                            status: study.status
+                        });
+                    });
+                    setSubmissionDates(dateMap);
                 } catch (error) {
                     console.error("Error fetching studies:", error.message);
                 } finally {
@@ -158,19 +207,31 @@ export default function ResearcherDashboard() {
                         <div className="stats-group">
                             <div className="stat-item">
                                 <Paperclip size={45} className="research-icon"/>
-                                <span className="stat-label">TOTAL <br/> RESEARCHES</span>
+                                <div className="stat-text-group">
+                                    <span className="stat-number">{stats.total}</span>
+                                    <span className="stat-label">TOTAL<br/>RESEARCHES</span>
+                                </div>
                             </div>
                             <div className="stat-item">
                                 <FileText size={45} className="research-icon"/>
-                                <span className="stat-label">PENDING <br/> RESEARCHES</span>
+                                <div className="stat-text-group">
+                                    <span className="stat-number">{stats.pending}</span>
+                                    <span className="stat-label">PENDING<br/>RESEARCHES</span>
+                                </div>
                             </div>
                             <div className="stat-item">
                                 <CheckCircle size={45} className="research-icon"/>
-                                <span className="stat-label">APPROVED <br/> RESEARCHES</span>
+                                <div className="stat-text-group">
+                                    <span className="stat-number">{stats.approved}</span>
+                                    <span className="stat-label">APPROVED<br/>RESEARCHES</span>
+                                </div>
                             </div>
                             <div className="stat-item">
                                 <XCircle size={45} className="research-icon"/>
-                                <span className="stat-label">REJECTED <br/> RESEARCHES</span>
+                                <div className="stat-text-group">
+                                    <span className="stat-number">{stats.rejected}</span>
+                                    <span className="stat-label">REJECTED<br/>RESEARCHES</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -236,7 +297,7 @@ export default function ResearcherDashboard() {
                             <div className="modal-header">
                                 <h2>{selectedStudy.title}</h2>
                                 <div className="modal-header-actions">
-                                    {selectedStudy.status === 'Pending' && (
+                                    {selectedStudy.status?.replace(/"/g, '').trim() === 'Pending' && (
                                         <button
                                             className="edit-submission-btn"
                                             onClick={() => navigate(`/researcher-study/edit/${selectedStudy.research_id}`)}
@@ -332,6 +393,52 @@ export default function ResearcherDashboard() {
                                             <p>No files attached.</p>
                                         )}
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {calendarModal && (
+                    <div className="modal-overlay" onClick={() => setCalendarModal(null)}>
+                        <div className="modal-content cal-modal" onClick={e => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h2>{calendarModal.date}</h2>
+                                <button className="close-btn" onClick={() => setCalendarModal(null)}>
+                                    <X size={24}/>
+                                </button>
+                            </div>
+                            <div className="modal-body">
+                                <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                                    {calendarModal.studies.length} submission(s) on this date
+                                </p>
+                                <div className="cal-study-list">
+                                    {calendarModal.studies.map((s, i) => (
+                                        <div key={i} className="cal-study-item">
+                                            <div className="cal-study-info">
+                                                <strong>{s.title}</strong>
+                                                <span className="cal-study-time">
+                                    {new Date(s.created_at).toLocaleTimeString('en-US', {
+                                        hour: '2-digit', minute: '2-digit'
+                                    })}
+                                </span>
+                                            </div>
+                                            <span className="status-badge" style={{
+                                                background: {
+                                                    'Pending': '#fef9c3', 'Approved': '#dcfce7',
+                                                    'Rejected': '#fee2e2'
+                                                }[s.status] || '#f1f5f9',
+                                                color: {
+                                                    'Pending': '#854d0e', 'Approved': '#166534',
+                                                    'Rejected': '#991b1b'
+                                                }[s.status] || '#475569',
+                                                fontSize: '0.7rem', padding: '3px 10px',
+                                                borderRadius: '999px', fontWeight: 700
+                                            }}>
+                                {s.status}
+                            </span>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>

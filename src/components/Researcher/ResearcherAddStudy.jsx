@@ -7,6 +7,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import Navbar from './ResearcherNavbar';
 import './ResearcherAddStudy.css';
 import Dropdown from './Dropdown.jsx';
+import ResearcherEditStudy from './ResearcherEditStudy';
 
 export default function ResearcherAddStudy() {
     const { firstName, lastName, dbId } = UserAuth(); // gets the current user

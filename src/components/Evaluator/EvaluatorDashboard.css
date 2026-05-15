@@ -25,9 +25,9 @@
 
 .first-row {
     display: flex;
-    justify-content: left;
+    justify-content: space-between;
     align-items: center;
-    gap: 10rem;
+    gap: 6rem;
     margin-bottom: 2rem;
     flex-wrap: wrap;
 }

@@ -41,9 +41,9 @@ body {
 /* FIRST ROW */
 .first-row {
     display: flex;
-    justify-content: space-between;
+    justify-content: left;
     align-items: center;
-    gap: 2rem;
+    gap: 10rem;
     margin-bottom: 3rem;
     flex-wrap: wrap;
 }
@@ -56,8 +56,7 @@ body {
 
 .stats-group {
     display: flex;
-    gap: 1.5rem;
-    flex-wrap: wrap;
+    gap: 1rem;
 }
 
 .stat-item {
@@ -65,10 +64,28 @@ body {
     flex-direction: column;
     align-items: flex-start;
     background: var(--white);
-    padding: 1.2rem 1.8rem;
-    border-radius: 24px;
+    padding: 1rem 2rem;
+    border-radius: 45px;
     box-shadow: var(--shadow);
     min-width: 160px;
+}
+
+.stat-item:last-child {
+    border-right: none;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #2D3142;
+}
+
+.stat-label {
+    display: block;
+    text-align: left;
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
 }
 
 .research-icon {
@@ -133,6 +150,7 @@ body {
 .calendar-section {
     flex: 1;
     min-width: 280px;
+    min-height: 280px;
     background: white;
     border-radius: 20px;
     padding: 1.5rem;
@@ -241,32 +259,83 @@ body {
 
 /* Calendar */
 .calendar-day {
-    aspect-ratio: 1;
-    font-size: 0.85rem;
-    color: #4a5568;
+    position: relative;
+    cursor: default;
+}
+
+.calendar-day.has-submissions {
+    cursor: pointer;
+    font-weight: 800;
+    color: #031640;
+}
+
+.calendar-day.has-submissions:hover {
+    background: #e8edf7;
+    border-radius: 6px;
+}
+
+.calendar-dot {
+    position: absolute;
+    bottom: 1px;
+    right: 1px;
+    background: #031640;
+    color: white;
+    font-size: 0.55rem;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
-}
-
-.calendar-day.today {
-    background: #2D344A;
-    color: #ffffff;
-    border-radius: 8px;
-    font-weight: 600;
-}
-
-.upcoming-deadlines h3 {
-    font-family: 'Inter', sans-serif;
     font-weight: 700;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #8c92a4;
-    margin-top: 2rem;
+    line-height: 1;
 }
 
+.calendar-day.today .calendar-dot {
+    background: white;
+    color: #031640;
+}
+
+.cal-modal {
+    max-width: 420px !important;
+}
+
+.cal-study-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cal-study-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    gap: 12px;
+}
+
+.cal-study-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+}
+
+.cal-study-info strong {
+    font-size: 0.875rem;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+}
+
+.cal-study-time {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
 
 /* MODAL / OVERLAY STYLES */
 .modal-content {

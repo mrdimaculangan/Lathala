@@ -34,11 +34,6 @@ export default function EvaluatorActivityLog() {
     const [evaluatorInfo, setEvaluatorInfo] = useState(null);
 
     useEffect(() => {
-        console.log("=== DEBUG: Component mounted ===");
-        console.log("dbId from UserAuth:", dbId);
-        console.log("userRole:", userRole);
-        console.log("session:", session?.user?.email);
-        
         if (!dbId) {
             console.log("No dbId found, waiting for auth...");
             return;
@@ -151,7 +146,6 @@ export default function EvaluatorActivityLog() {
                 console.log("Formatted logs:", formattedLogs);
                 setLogs(formattedLogs);
 
-                // If there's a logId in URL params, open that log
                 if (logId) {
                     console.log("Looking for log with ID:", logId);
                     const target = formattedLogs.find(l => String(l.log_id) === String(logId));
@@ -209,7 +203,7 @@ export default function EvaluatorActivityLog() {
                     <h1>My Evaluation Activity</h1>
                     <p>Track all research papers you have evaluated as an evaluator.</p>
                 </div>
-                
+
                 <div className="alog-card">
                     <div className="alog-toolbar">
                         <input

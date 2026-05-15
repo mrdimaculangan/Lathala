@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
-import { UserPlus, X, Check, Users } from 'lucide-react';
+import { UserPlus, X, Check, Users, Search } from 'lucide-react';
 import AdminNavbar from "./AdminNavbar";
 import "./AdminQueue.css";
 
+const ITEMS_PER_PAGE = 10;
+
 export default function AdminQueue() {
     const [researches, setResearches] = useState([]);
+    const [filteredResearches, setFilteredResearches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [assignTarget, setAssignTarget] = useState(null);
@@ -14,9 +17,46 @@ export default function AdminQueue() {
     const [alreadyAssigned, setAlreadyAssigned] = useState([]);
     const [saving, setSaving] = useState(false);
 
+    // Pagination and Filter states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterStatus, setFilterStatus] = useState('all');
+
     useEffect(() => {
         loadQueueData();
     }, []);
+
+    // Filter and search logic
+    useEffect(() => {
+        let result = [...researches];
+
+        if (filterStatus !== 'all') {
+            result = result.filter(r => {
+                if (filterStatus === 'assigned') return r.assigned_evaluators?.length > 0;
+                if (filterStatus === 'unassigned') return r.assigned_evaluators?.length === 0;
+                return true;
+            });
+        }
+
+        if (searchTerm) {
+            result = result.filter(r =>
+                r.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                r.researcher_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                r.hru_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                r.assigned_evaluators?.some(e => e.name.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+        }
+
+        setFilteredResearches(result);
+        setCurrentPage(1);
+    }, [searchTerm, filterStatus, researches]);
+
+    // Pagination derived data
+    const totalPages = Math.ceil(filteredResearches.length / ITEMS_PER_PAGE);
+    const paginatedResearches = filteredResearches.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
 
     async function loadQueueData() {
         setLoading(true);
@@ -92,7 +132,6 @@ export default function AdminQueue() {
                     const assignedEvaluators = (queueData || [])
                         .filter(q => q.research_id === research.research_id)
                         .map(q => {
-                            // Properly format name with space
                             const firstName = q.Evaluator?.Users?.first_name || '';
                             const lastName = q.Evaluator?.Users?.last_name || '';
                             const fullName = `${firstName} ${lastName}`.trim();
@@ -106,7 +145,6 @@ export default function AdminQueue() {
                             };
                         });
 
-                    // Format researcher name with space
                     const researcherFirstName = research.Researcher?.Users?.first_name || '';
                     const researcherLastName = research.Researcher?.Users?.last_name || '';
                     const researcherFullName = `${researcherFirstName} ${researcherLastName}`.trim();
@@ -137,7 +175,6 @@ export default function AdminQueue() {
         setSaving(false);
 
         try {
-            // Get all evaluators with their user info
             const { data: evaluatorsData, error: evalError } = await supabase
                 .from('Evaluator')
                 .select(`
@@ -152,7 +189,6 @@ export default function AdminQueue() {
 
             if (evalError) throw evalError;
 
-            // Get currently assigned evaluators for this research
             const { data: assignedData, error: assignedError } = await supabase
                 .from('Research_Queue')
                 .select('evaluator_id')
@@ -190,7 +226,6 @@ export default function AdminQueue() {
         const toRemove = alreadyIds.filter(id => !currentSelection.includes(id));
 
         try {
-            // Add new assignments
             if (toAdd.length > 0) {
                 const newRows = toAdd.map(id => ({
                     research_id: assignTarget.research_id,
@@ -206,7 +241,6 @@ export default function AdminQueue() {
                 if (insertError) throw insertError;
             }
 
-            // Remove unassigned evaluators
             if (toRemove.length > 0) {
                 const { error: deleteError } = await supabase
                     .from('Research_Queue')
@@ -219,7 +253,7 @@ export default function AdminQueue() {
 
             alert(`Successfully updated evaluators for ${assignTarget.hru_no}`);
             setIsAssignModalOpen(false);
-            await loadQueueData(); // Refresh the list
+            await loadQueueData();
         } catch (error) {
             console.error('Error saving assignments:', error);
             alert('Error saving assignments. Please try again.');
@@ -236,6 +270,39 @@ export default function AdminQueue() {
         );
     };
 
+    const renderPagination = () => {
+        if (totalPages <= 1) return null;
+
+        const pages = [];
+        for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+            pages.push(i);
+        }
+
+        return (
+            <div className="pagination">
+                <button className="page-btn" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>«</button>
+                <button className="page-btn" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>‹</button>
+                {pages.map(page => (
+                    <button
+                        key={page}
+                        className={`page-btn ${currentPage === page ? 'active' : ''}`}
+                        onClick={() => setCurrentPage(page)}
+                    >
+                        {page}
+                    </button>
+                ))}
+                {totalPages > 5 && <span className="page-ellipsis">…</span>}
+                {totalPages > 5 && (
+                    <button className="page-btn" onClick={() => setCurrentPage(totalPages)}>
+                        {totalPages}
+                    </button>
+                )}
+                <button className="page-btn" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>›</button>
+                <button className="page-btn" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>»</button>
+            </div>
+        );
+    };
+
     return (
         <div className="admin-layout">
             <AdminNavbar />
@@ -245,10 +312,28 @@ export default function AdminQueue() {
                         <h1>Research Queue</h1>
                         <p>Research papers pending evaluation</p>
                     </div>
-                    <div className="queue-stats">
-                        <div className="stat-badge">
-                            <Users size={16} />
-                            <span>{researches.length} Pending</span>
+                    <div className="inventory-controls">
+                        <div className="search-wrapper">
+                            <Search size={18} className="search-icon" />
+                            <input
+                                type="text"
+                                placeholder="Search by title, author, HRU, or evaluator..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="filter-wrapper">
+                            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                                <option value="all">All Status</option>
+                                <option value="assigned">Has Evaluators</option>
+                                <option value="unassigned">No Evaluators</option>
+                            </select>
+                        </div>
+                        <div className="queue-stats">
+                            <div className="stat-badge">
+                                <Users size={16} />
+                                <span>{filteredResearches.length} Pending</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -272,19 +357,21 @@ export default function AdminQueue() {
                                         <div className="loading-state">Loading...</div>
                                     </td>
                                 </tr>
-                            ) : researches.length === 0 ? (
+                            ) : paginatedResearches.length === 0 ? (
                                 <tr>
                                     <td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>
                                         <div className="empty-state">
                                             <p>No pending research found.</p>
                                             <p className="empty-subtitle">
-                                                All research has been evaluated or is in progress.
+                                                {searchTerm || filterStatus !== 'all'
+                                                    ? 'Try adjusting your search or filter criteria.'
+                                                    : 'All research has been evaluated or is in progress.'}
                                             </p>
                                         </div>
                                     </td>
                                 </tr>
                             ) : (
-                                researches.map((research) => (
+                                paginatedResearches.map((research) => (
                                     <tr key={research.research_id}>
                                         <td className="hru-cell">{research.hru_no}</td>
                                         <td className="title-cell">{research.title}</td>
@@ -323,6 +410,16 @@ export default function AdminQueue() {
                         </tbody>
                     </table>
                 </div>
+
+                {!loading && filteredResearches.length > 0 && (
+                    <div className="pagination-wrapper">
+                        <div className="pagination-info">
+                            Showing {filteredResearches.length === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1}–
+                            {Math.min(currentPage * ITEMS_PER_PAGE, filteredResearches.length)} of {filteredResearches.length} results
+                        </div>
+                        {renderPagination()}
+                    </div>
+                )}
 
                 {/* Assign Evaluators Modal */}
                 {isAssignModalOpen && assignTarget && (
@@ -391,6 +488,9 @@ export default function AdminQueue() {
                                     })}
                                 </div>
                                 <div className="assign-actions">
+                                    <div className="selected-count">
+                                        {selectedEvaluatorIds.length} evaluator(s) selected
+                                    </div>
                                     <div className="assign-btns">
                                         <button
                                             className="cancel-assign-btn"

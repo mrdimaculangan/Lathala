@@ -26,6 +26,8 @@
     align-items: flex-start;
     margin-bottom: 30px;
     width: 100%;
+    flex-wrap: wrap;
+    gap: 16px;
 }
 
 .header-left h1 {
@@ -49,6 +51,7 @@
     display: flex;
     gap: 15px;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .search-wrapper {
@@ -518,12 +521,13 @@
     border-color: #cbd5e1;
 }
 
-/* Pagination */
+/* Pagination - Left text, Right buttons */
 .pagination-wrapper {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 4px;
+    padding: 20px 4px 12px 4px;
+    width: 100%;
 }
 
 .pagination-info {

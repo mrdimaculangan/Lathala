@@ -3,6 +3,11 @@
 }
 
 .researcher-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -390,7 +395,8 @@
     background: white;
     transition: all 0.2s ease;
     border: 1px solid #f3f4f6;
-    margin-bottom: 8px; /* Added spacing between items */
+    margin-bottom: 8px;
+    /* Added spacing between items */
 }
 
 .notification-item:hover {
@@ -434,6 +440,7 @@
     background-color: #fef2f2;
     color: #dc2626;
 }
+
 .btn-delete:hover {
     background-color: #fee2e2;
 }
@@ -443,6 +450,7 @@
     background-color: #eff6ff;
     color: #2563eb;
 }
+
 .btn-view:hover {
     background-color: #dbeafe;
 }
@@ -452,6 +460,7 @@
     background-color: #f0fdf4;
     color: #16a34a;
 }
+
 .btn-mark-read:hover {
     background-color: #dcfce7;
 }
@@ -505,6 +514,7 @@
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -515,6 +525,7 @@
         transform: translateY(30px);
         opacity: 0;
     }
+
     to {
         transform: translateY(0);
         opacity: 1;
@@ -546,19 +557,19 @@
         width: 95%;
         max-height: 90vh;
     }
-    
+
     .popup-header {
         padding: 16px 20px;
     }
-    
+
     .notification-tabs {
         padding: 8px 20px;
     }
-    
+
     .tab-content {
         padding: 12px 20px;
     }
-    
+
     .notification-item {
         padding: 10px;
     }
@@ -626,7 +637,22 @@
     color: #6b7280;
 }
 
-.action-btn.view:hover { background: #dbeafe; color: #2563eb; }
-.action-btn.read:hover { background: #dcfce7; color: #16a34a; }
-.action-btn.read:disabled { opacity: 0.3; cursor: default; }
-.action-btn.delete:hover { background: #fee2e2; color: #dc2626; }
+.action-btn.view:hover {
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+.action-btn.read:hover {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.action-btn.read:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.action-btn.delete:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}

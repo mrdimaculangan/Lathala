@@ -3,6 +3,11 @@
 }
 
 .admin-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -10,11 +15,6 @@
     background-color: #ffffff;
     border-bottom: 1px solid #eee;
     height: 60px;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 101;
 }
 
 .navbar-group-left {

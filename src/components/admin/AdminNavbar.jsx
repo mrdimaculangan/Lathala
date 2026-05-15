@@ -21,10 +21,10 @@ export default function AdminNavbar() {
                         </figure>
                     </Link>
 
-                    <div className='search-container'>
+                    {/* <div className='search-container'>
                         <Search size={18} className="search-icon-inside" />
                         <input type="text" placeholder='Search research, authors, etc...' />
-                    </div>
+                    </div> */}
                 </section>
 
                 <section className='navbar-group-right'>
@@ -51,27 +51,15 @@ export default function AdminNavbar() {
                             </NavLink>
                         </li>
                         <li>
-                            <NavLink to="/inventory" className='sidebar-link'>
+                            <NavLink to="/admin/inventory" className={({ isActive }) => isActive ? 'sidebar-link active' : 'sidebar-link'}>
                                 <FileText size={22} className='sidebar-icon' />
-                                <span className='sidebar-text'>Research Inventory</span>
+                                <span className='sidebar-text'>Master Inventory</span>
                             </NavLink>
                         </li>
                         <li>
-                            <NavLink to="/review-queue" className='sidebar-link'>
-                                <FilePlus2 size={22} className='sidebar-icon' />
-                                <span className='sidebar-text'>Review Queue</span>
-                            </NavLink>
-                        </li>
-                        <li>
-                            <NavLink to="/admin/users" className='sidebar-link'>
+                            <NavLink to="/admin/users" className={({ isActive }) => isActive ? 'sidebar-link active' : 'sidebar-link'}>
                                 <Users size={22} className='sidebar-icon' />
                                 <span className='sidebar-text'>User Management</span>
-                            </NavLink>
-                        </li>
-                        <li>
-                            <NavLink to="/activity-log" className='sidebar-link'>
-                                <History size={22} className='sidebar-icon' />
-                                <span className='sidebar-text'>Activity Log</span>
                             </NavLink>
                         </li>
                     </ul>

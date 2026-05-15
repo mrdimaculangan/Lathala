@@ -7,7 +7,7 @@
     --text-main: #0f172a;
     --text-muted: #64748b;
     --white: #ffffff;
-    --shadow: 0 4px 12px rgba(0,0,0,0.05);
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 * {
@@ -24,6 +24,10 @@ body {
 
 .dashboard-wrapper {
     min-height: 100vh;
+    margin-top: 60px;
+    margin-left: 75px;
+    transition: margin-left 0.3s ease;
+    padding: 20px;
 }
 
 .dashboard-container {
@@ -120,7 +124,7 @@ body {
     background: white;
     padding: 2rem;
     border-radius: 20px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
     max-height: 500px;
     display: flex;
     flex-direction: column;
@@ -136,7 +140,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    align-self: flex-start;    /* stops it from stretching to table height */
+    align-self: flex-start;
+    /* stops it from stretching to table height */
 }
 
 
@@ -291,8 +296,15 @@ body {
 }
 
 @keyframes modalFadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .modal-header {

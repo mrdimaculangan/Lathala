@@ -36,42 +36,42 @@ function EvaluateResearch() {
     useEffect(() => {
         const fetchEvaluatorWithDebug = async () => {
             console.log('=== STARTING EVALUATOR FETCH WITH DEBUG ===');
-            
+
             // Method 1: Try to get user from AuthContext
             console.log('1. AuthContext user:', authUser);
             console.log('   - user object keys:', authUser ? Object.keys(authUser) : 'null');
             console.log('   - user?.id:', authUser?.id);
             console.log('   - user?.user_id:', authUser?.user_id);
-            
+
             // Method 2: Get session directly from Supabase
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-            
+
             if (sessionError) {
                 console.error('Session error:', sessionError);
                 setDebugInfo(prev => ({ ...prev, sessionError: sessionError.message }));
                 return;
             }
-            
+
             if (!session) {
                 console.error('No active session found');
                 setDebugInfo(prev => ({ ...prev, error: 'No active session' }));
                 return;
             }
-            
+
             const authUserId = session.user.id;
             const authEmail = session.user.email;
-            console.log('2. Session user from Supabase:', { 
-                authUserId, 
+            console.log('2. Session user from Supabase:', {
+                authUserId,
                 authEmail,
-                userMetadata: session.user.user_metadata 
+                userMetadata: session.user.user_metadata
             });
-            
-            setDebugInfo(prev => ({ 
-                ...prev, 
+
+            setDebugInfo(prev => ({
+                ...prev,
                 sessionUserId: authUserId,
-                sessionEmail: authEmail 
+                sessionEmail: authEmail
             }));
-            
+
             try {
                 // Step 1: Check Evaluator table
                 console.log('3. Querying Evaluator table with user_id:', authUserId);
@@ -92,18 +92,18 @@ function EvaluateResearch() {
 
                 if (!evaluatorData) {
                     console.error('❌ No evaluator record found for user_id:', authUserId);
-                    
+
                     // Let's check what evaluators DO exist
                     const { data: allEvaluators, error: listError } = await supabase
                         .from('Evaluator')
                         .select('evaluator_id, user_id')
                         .limit(5);
-                    
+
                     console.log('First 5 evaluators in table:', allEvaluators);
-                    setDebugInfo(prev => ({ 
-                        ...prev, 
+                    setDebugInfo(prev => ({
+                        ...prev,
                         error: `No evaluator record for ${authUserId}`,
-                        sampleEvaluators: allEvaluators 
+                        sampleEvaluators: allEvaluators
                     }));
                     return;
                 }
@@ -177,14 +177,14 @@ function EvaluateResearch() {
                 .select('*')
                 .eq('research_id', researchId)
                 .single();
-            
+
             if (basicError) {
                 console.error('Error fetching basic research:', basicError);
                 setResearch(null);
                 setLoading(false);
                 return;
             }
-            
+
             if (!basicData) {
                 console.log('❌ No research found with ID:', researchId);
                 setResearch(null);
@@ -219,17 +219,17 @@ function EvaluateResearch() {
                 setLoading(false);
                 return;
             }
-            
+
             if (data) {
                 const researcher = data.Researcher;
                 const users = researcher?.Users;
-                
-                data.author = users 
-                    ? `${users.first_name || ''} ${users.last_name || ''}`.trim() 
+
+                data.author = users
+                    ? `${users.first_name || ''} ${users.last_name || ''}`.trim()
                     : 'Unknown Author';
                 data.author_email = users?.email || 'No email';
             }
-            
+
             setResearch(data || basicData);
         } catch (error) {
             console.error("Error fetching research details:", error);
@@ -278,7 +278,7 @@ function EvaluateResearch() {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-        
+
         if (submitting) return;
 
         if (
@@ -296,10 +296,10 @@ function EvaluateResearch() {
 
         try {
             const statusMap = {
-                'Approved':       'Approved',
+                'Approved': 'Approved',
                 'Minor_revision': 'With Minor Revisions',
                 'Major_revision': 'With Major Revisions',
-                'Rejected':       'Rejected',
+                'Rejected': 'Rejected',
             };
             const newStatus = statusMap[evaluation.recommendation];
 
@@ -307,17 +307,17 @@ function EvaluateResearch() {
             const { error: evalError } = await supabase
                 .from('Evaluation_Research')
                 .insert([{
-                    research_id:            Number(researchId),
-                    evaluator_id:           evaluatorId,
-                    sci_rigor:              Number(evaluation.scientificRigor),
-                    relevant_to_hru_obj:    Number(evaluation.relevance),
-                    ethical_compliance:     Number(evaluation.ethicalCompliance),
-                    methodology:            evaluation.methodology,
-                    strengths:              evaluation.strengths,
-                    weaknesses:             evaluation.weaknesses,
+                    research_id: Number(researchId),
+                    evaluator_id: evaluatorId,
+                    sci_rigor: Number(evaluation.scientificRigor),
+                    relevant_to_hru_obj: Number(evaluation.relevance),
+                    ethical_compliance: Number(evaluation.ethicalCompliance),
+                    methodology: evaluation.methodology,
+                    strengths: evaluation.strengths,
+                    weaknesses: evaluation.weaknesses,
                     overall_recommendation: evaluation.recommendation,
-                    additional_comments:    evaluation.overallComments,
-                    evaluated_at:           new Date().toISOString()  // ← Add this line
+                    additional_comments: evaluation.overallComments,
+                    evaluated_at: new Date().toISOString()  // ← Add this line
                 }]);
 
             if (evalError) throw evalError;
@@ -341,10 +341,10 @@ function EvaluateResearch() {
                 .from('ResearchActivityLog')
                 .insert([{
                     research_id: Number(researchId),
-                    actor_id:    evaluatorId,
-                    actor_role:  'evaluator',
-                    action:      'evaluated',
-                    notes:       notesText,
+                    actor_id: evaluatorId,
+                    actor_role: 'evaluator',
+                    action: 'evaluated',
+                    notes: notesText,
                 }])
                 .select()
                 .single();
@@ -366,18 +366,18 @@ function EvaluateResearch() {
                     .from('researcher_notifications')
                     .insert([{
                         recipient_id: researcherData.user_id,
-                        research_id:  Number(researchId),
-                        log_id:       logData.log_id,
-                        message:      `Your research "${research.title}" has been evaluated by ${evaluatorInfo.name}. Status: ${newStatus}.`,
+                        research_id: Number(researchId),
+                        log_id: logData.log_id,
+                        message: `Your research "${research.title}" has been evaluated by ${evaluatorInfo.name}. Status: ${newStatus}.`,
                     }]);
             } else {
                 await supabase
                     .from('researcher_notifications')
                     .insert([{
                         recipient_id: researcherAuthUUID,
-                        research_id:  Number(researchId),
-                        log_id:       logData.log_id,
-                        message:      `Your research "${research.title}" has been evaluated by ${evaluatorInfo.name}. Status: ${newStatus}.`,
+                        research_id: Number(researchId),
+                        log_id: logData.log_id,
+                        message: `Your research "${research.title}" has been evaluated by ${evaluatorInfo.name}. Status: ${newStatus}.`,
                     }]);
             }
 
@@ -391,7 +391,7 @@ function EvaluateResearch() {
             setSubmitting(false);
         }
     };
-    
+
     if (loading) return <div className="evaluate-loading">Loading research details...</div>;
     if (!research) return <div className="evaluate-loading">Research not found</div>;
 
@@ -451,8 +451,8 @@ function EvaluateResearch() {
                                     {research.registration_date
                                         ? new Date(research.registration_date).toLocaleDateString()
                                         : research.submission_date
-                                        ? new Date(research.submission_date).toLocaleDateString()
-                                        : 'N/A'}
+                                            ? new Date(research.submission_date).toLocaleDateString()
+                                            : 'N/A'}
                                 </span>
                             </div>
                             <div className="summary-row">
@@ -479,14 +479,14 @@ function EvaluateResearch() {
                                                 <span className="file-type">{file.file_type}</span>
                                             </div>
                                             <div className="file-buttons">
-                                                <button 
+                                                <button
                                                     className="icon-btn"
                                                     onClick={() => window.open(file.file_url, '_blank')}
                                                     title="Preview"
                                                 >
                                                     👁️
                                                 </button>
-                                                <button 
+                                                <button
                                                     className="icon-btn"
                                                     onClick={() => handleDownload(file.file_url, getCleanFileName(file.file_url))}
                                                     title="Download"

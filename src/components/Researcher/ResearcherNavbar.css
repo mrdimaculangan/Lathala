@@ -563,3 +563,70 @@
         padding: 10px;
     }
 }
+
+/* Badge on bell */
+.notification-button {
+    position: relative;
+}
+
+.notif-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: #ef4444;
+    color: white;
+    font-size: 0.6rem;
+    font-weight: 700;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.tab-unread-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ef4444;
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    margin-left: 6px;
+}
+
+.notif-link {
+    color: #2563eb;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.notif-empty {
+    text-align: center;
+    padding: 2rem;
+    color: #9ca3af;
+    font-size: 0.875rem;
+}
+
+.action-btn {
+    background: #f3f4f6;
+    border: none;
+    padding: 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    color: #6b7280;
+}
+
+.action-btn.view:hover { background: #dbeafe; color: #2563eb; }
+.action-btn.read:hover { background: #dcfce7; color: #16a34a; }
+.action-btn.read:disabled { opacity: 0.3; cursor: default; }
+.action-btn.delete:hover { background: #fee2e2; color: #dc2626; }

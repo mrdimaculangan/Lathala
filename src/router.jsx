@@ -7,7 +7,10 @@ import AdminDashboard from "./components/Admin/AdminDashboard.jsx";
 import AdminUserManagement from "./components/Admin/AdminUserManagement.jsx";
 import ResearcherAddStudy from "./components/Researcher/ResearcherAddStudy.jsx";
 import ErrorPage from "./components/ErrorPage.jsx";
-import EvaluateResearch from "./components/Evaluator/EvaluateResearch.jsx"; 
+import EvaluateResearch from "./components/Evaluator/EvaluateResearch.jsx";
+import ResearcherActivityLog from "./components/Researcher/ResearcherActivityLog.jsx";
+import UserProfile from "./components/Researcher/UserProfile.jsx";
+import EvaluatorUserProfile from "./components/Evaluator/UserProfile.jsx";
 
 
 export const router = createBrowserRouter([
@@ -22,10 +25,43 @@ export const router = createBrowserRouter([
         )
     },
     {
+        path: "/researcher-activity-log",
+        element: (
+            <ProtectedRoute allowedRoles={['Researcher']}>
+                <ResearcherActivityLog />
+            </ProtectedRoute>
+        )
+    },
+    // with openLogId param so notification can deep-link to a specific modal
+    {
+        path: "/researcher-activity-log/:openLogId",
+        element: (
+            <ProtectedRoute allowedRoles={['Researcher']}>
+                <ResearcherActivityLog />
+            </ProtectedRoute>
+        )
+    },
+    {
+        path: "/user-profile",
+        element: (
+            <ProtectedRoute allowedRoles={['Researcher']}>
+                <UserProfile />
+            </ProtectedRoute>
+        )
+    },
+    {
         path: "/evaluator-dashboard",
         element: (
             <ProtectedRoute allowedRoles={['Evaluator']}>
                 <EvaluatorDashboard />
+            </ProtectedRoute>
+        )
+    },
+    {
+        path: "/evaluator-profile",
+        element: (
+            <ProtectedRoute allowedRoles={['Evaluator']}>
+                <EvaluatorUserProfile />
             </ProtectedRoute>
         )
     },

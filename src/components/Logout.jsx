@@ -1,15 +1,29 @@
 import { supabase } from '../supabaseClient';
 import { LogOut } from 'lucide-react';
+import { useNotifications } from '../context/NotificationContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function Logout() {
+    const navigate = useNavigate();
+    const { clearNotifications } = useNotifications(); // Add this
+
     const handleLogout = async () => {
-        // Tell Supabase to end the session
-        const { error } = await supabase.auth.signOut();
+        try {
+            // Clear notifications first (optional but good for clean state)
+            clearNotifications();
+            
+            // Tell Supabase to end the session
+            const { error } = await supabase.auth.signOut();
 
-        if (error) {
-            console.error("Error signing out:", error.message);
+            if (error) {
+                console.error("Error signing out:", error.message);
+            } else {
+                // Redirect to login page after successful logout
+                navigate('/login');
+            }
+        } catch (err) {
+            console.error("Logout error:", err);
         }
-
     };
 
     return (

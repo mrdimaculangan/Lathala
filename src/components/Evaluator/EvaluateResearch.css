@@ -361,3 +361,41 @@
         justify-content: stretch;
     }
 }
+
+/* Evaluator Info Banner */
+.evaluator-info-banner {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 16px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.evaluator-info-content {
+    color: white;
+    font-size: 0.95rem;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.evaluator-info-content strong {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.evaluator-info-content span {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .evaluator-info-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+}

@@ -189,37 +189,35 @@ export default function ResearcherDashboard() {
                                 </div>
                             ) : (
                                 <div className="table-responsive">
-                                    <table className="studies-table">
-                                        <thead>
-                                        <tr>
-                                            <th>Research Title</th>
-                                            <th>File Name</th>
-                                            <th>File Type</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody>
-                                        {studies.map((study) => (
-                                            <tr key={study.research_id} onClick={() => handleStudyClick(study)}
-                                                className="clickable-row">
-                                                <td className="title-cell">
+                                    {studies.map((study) => {
+                                        const statusColor = {
+                                            'Pending': { bg: '#fef9c3', text: '#854d0e', dot: '#eab308' },
+                                            'Approved': { bg: '#dcfce7', text: '#166534', dot: '#22c55e' },
+                                            'Rejected': { bg: '#fee2e2', text: '#991b1b', dot: '#ef4444' },
+                                            'With Minor Revisions': { bg: '#dbeafe', text: '#1e40af', dot: '#3b82f6' },
+                                            'With Major Revisions': { bg: '#ede9fe', text: '#5b21b6', dot: '#8b5cf6' },
+                                        }[study.status] || { bg: '#f1f5f9', text: '#475569', dot: '#94a3b8' };
+
+                                        return (
+                                            <div key={study.research_id} className="study-card" onClick={() => handleStudyClick(study)}>
+                                                <div className="study-card-header">
+                                                <span className="status-badge" style={{ background: statusColor.bg, color: statusColor.text }}>
+                                                <span className="status-dot" style={{ background: statusColor.dot }}></span>
+                                                    {study.status}
+                                                </span>
+                                                    <span className="hru-label">{study.hru_no}</span>
+                                                    <div className="file-type-pills">
+                                                        {study.research_files?.map((f, i) => (
+                                                            <span key={i} className="file-type-badge">{f.file_type}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <div className="study-card-body">
                                                     <strong>{study.title}</strong>
-                                                    <span className="hru-badge">{study.hru_no}</span>
-                                                </td>
-                                                <td>
-                                                    {study.research_files?.map((f, i) => (
-                                                        <div key={i}
-                                                             className="file-list-item">{getCleanFileName(f.file_url)}</div>
-                                                    ))}
-                                                </td>
-                                                <td>
-                                                    {study.research_files?.map((f, i) => (
-                                                        <div key={i} className="file-type-badge">{f.file_type}</div>
-                                                    ))}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        </tbody>
-                                    </table>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -237,7 +235,17 @@ export default function ResearcherDashboard() {
                         <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                             <div className="modal-header">
                                 <h2>{selectedStudy.title}</h2>
-                                <button className="close-btn" onClick={closeModal}><X size={24}/></button>
+                                <div className="modal-header-actions">
+                                    {selectedStudy.status === 'Pending' && (
+                                        <button
+                                            className="edit-submission-btn"
+                                            onClick={() => navigate(`/researcher-study/edit/${selectedStudy.research_id}`)}
+                                        >
+                                            Edit Submission
+                                        </button>
+                                    )}
+                                    <button className="close-btn" onClick={closeModal}><X size={24}/></button>
+                                </div>
                             </div>
 
                             <div className="modal-body">

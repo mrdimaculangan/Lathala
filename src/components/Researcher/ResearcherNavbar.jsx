@@ -1,40 +1,52 @@
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import Logout from '../Logout';
 import './ResearcherNavbar.css';
 import { UserAuth } from '../../context/AuthContext';
-import { Search, User, LayoutGrid, FileText, FilePlus2, Users, History, Settings, LogOut, Menu, Bell } from 'lucide-react';
+import { useNotifications } from '../../context/NotificationContext';
+import { Search, User, LayoutGrid, FileText, Users, History, Settings, Bell, Eye, CheckCircle, Trash2 } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import { useState } from 'react';
-import { Trash2, Eye, CheckCircle } from 'lucide-react';
 
 export default function ResearcherNavbar() {
-    const [showNotificationPopup, setShowNotificationPopup] = useState(false);
+    const navigate = useNavigate();
     const { firstName, lastName, session, userRole } = UserAuth();
+    const { 
+        notifications, 
+        unreadCount, 
+        loading, 
+        markAsRead, 
+        deleteNotification,
+        refreshNotifications 
+    } = useNotifications();
     const displayName = firstName ? `${firstName} ${lastName}` : session?.user?.email;
 
-    const toggleNotificationPopup = () => {
-        setShowNotificationPopup(!showNotificationPopup);
-    }
-
+    const [showNotificationPopup, setShowNotificationPopup] = useState(false);
     const [activeTab, setActiveTab] = useState('recent');
 
-    const handleTabChange = (tab) => {
-        setActiveTab(tab);
-    }
+    const handleMarkRead = async (e, notifId) => {
+        e.stopPropagation();
+        console.log('Calling markAsRead for:', notifId);
+        await markAsRead(notifId);
+    };
 
-    const NotificationActions = () => (
-        <div className="notification-actions">
-            <button className="action-btn view" title="View">
-                <Eye size={16} />
-            </button>
-            <button className="action-btn read" title="Mark as Read">
-                <CheckCircle size={16} />
-            </button>
-            <button className="action-btn delete" title="Delete">
-                <Trash2 size={16} />
-            </button>
-        </div>
-    );
+    const handleDelete = async (e, notifId) => {
+        e.stopPropagation();
+        console.log('Calling deleteNotification for:', notifId);
+        await deleteNotification(notifId);
+    };
+
+    const handleView = async (notif) => {
+        console.log('Viewing notification:', notif);
+        if (!notif.is_read) {
+            await markAsRead(notif.notification_id);
+        }
+        setShowNotificationPopup(false);
+        navigate(`/researcher-activity-log/${notif.log_id}`);
+    };
+
+    const displayedNotifications = activeTab === 'unread'
+        ? notifications.filter(n => !n.is_read)
+        : notifications;
 
     return (
         <>
@@ -46,7 +58,6 @@ export default function ResearcherNavbar() {
                             <figcaption><h3>Lathala</h3></figcaption>
                         </figure>
                     </Link>
-
                     <div className='search-container'>
                         <Search size={18} className="search-icon-inside" />
                         <input type="text" placeholder='Search research, authors, etc...' />
@@ -56,18 +67,17 @@ export default function ResearcherNavbar() {
                 <section className='navbar-group-right'>
                     <button
                         className='notification-button'
-                        onClick={toggleNotificationPopup}
+                        onClick={() => setShowNotificationPopup(!showNotificationPopup)}
                         aria-label="Notifications"
                     >
                         <Bell size={20} />
+                        {unreadCount > 0 && (
+                            <span className="notif-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                        )}
                     </button>
 
-
                     <aside className='user-profile'>
-                        <div className="avatar-placeholder">
-                            <User size={20} />
-                        </div>
-
+                        <div className="avatar-placeholder"><User size={20} /></div>
                         <div className="user-info">
                             <span className='user-name'>{displayName}</span>
                             <span className='user-role'>{userRole}</span>
@@ -77,6 +87,7 @@ export default function ResearcherNavbar() {
             </nav>
 
             <aside className='sidebar'>
+                {/* Sidebar content remains the same */}
                 <div className='sidebar-wrapper'>
                     <ul className='sidebar-list main-nav-list'>
                         <li>
@@ -92,7 +103,7 @@ export default function ResearcherNavbar() {
                             </NavLink>
                         </li>
                         <li>
-                            <NavLink to="/inventory" className='sidebar-link'>
+                            <NavLink to="/researcher-activity-log" className={({ isActive }) => isActive ? 'sidebar-link active' : 'sidebar-link'}>
                                 <FileText size={22} className='sidebar-icon' />
                                 <span className='sidebar-text'>Activity Log</span>
                             </NavLink>
@@ -106,78 +117,85 @@ export default function ResearcherNavbar() {
                                 <span className='sidebar-text'>Settings</span>
                             </NavLink>
                         </li>
-                        <li>
-                            <Logout />
-                        </li>
+                        <li><Logout /></li>
                     </ul>
                 </div>
             </aside>
 
-
-            {/*Notification Popup */}
-           {showNotificationPopup && (
-                <div className="notification-overlay" onClick={toggleNotificationPopup}>
+            {/* NOTIFICATION POPUP */}
+            {showNotificationPopup && (
+                <div className="notification-overlay" onClick={() => setShowNotificationPopup(false)}>
                     <div className="notification-popup" onClick={(e) => e.stopPropagation()}>
                         <div className="popup-header">
-                            <button className="popup-close-button" onClick={toggleNotificationPopup}>✕</button>
-                            <h3>Researcher Notifications</h3>
+                            <button className="popup-close-button" onClick={() => setShowNotificationPopup(false)}>✕</button>
+                            <h3>Notifications</h3>
                         </div>
-                        
+
                         <div className="notification-tabs">
                             <button 
-                                className={`tab-button ${activeTab === 'recent' ? 'active' : ''}`}
-                                onClick={() => handleTabChange('recent')}
+                                className={`tab-button ${activeTab === 'recent' ? 'active' : ''}`} 
+                                onClick={() => setActiveTab('recent')}
                             >
-                                Recent
+                                Recent ({notifications.length})
                             </button>
                             <button 
-                                className={`tab-button ${activeTab === 'unread' ? 'active' : ''}`}
-                                onClick={() => handleTabChange('unread')}
+                                className={`tab-button ${activeTab === 'unread' ? 'active' : ''}`} 
+                                onClick={() => setActiveTab('unread')}
                             >
-                                Unread
+                                Unread ({unreadCount})
                             </button>
                         </div>
 
-                         <div className="popup-content">
-                            {activeTab === 'recent' && (
-                                <div className="tab-content active">
-                                    <div className="notification-list">
-                                        {/* Example Item 1 */}
-                                        <div className="notification-item unread">
+                        <div className="popup-content">
+                            {loading ? (
+                                <p className="notif-empty">Loading...</p>
+                            ) : displayedNotifications.length === 0 ? (
+                                <p className="notif-empty">No notifications here.</p>
+                            ) : (
+                                <div className="notification-list">
+                                    {displayedNotifications.map(notif => (
+                                        <div
+                                            key={notif.notification_id}
+                                            className={`notification-item ${!notif.is_read ? 'unread' : ''}`}
+                                            onClick={() => handleView(notif)}
+                                            style={{ cursor: 'pointer' }}
+                                        >
                                             <div className="notification-icon">📄</div>
                                             <div className="notification-details">
-                                                <p className="notification-message">Your research paper has been reviewed</p>
-                                                <span className="notification-time">2 minutes ago</span>
+                                                <p className="notification-message">
+                                                    {notif.message || `Your research has been evaluated.`}{' '}
+                                                    <span className="notif-link">View in Activity Log →</span>
+                                                </p>
+                                                <span className="notification-time">
+                                                    {new Date(notif.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                </span>
                                             </div>
-                                            <NotificationActions />
-                                        </div>
-
-                                        {/* Example Item 2 */}
-                                        <div className="notification-item">
-                                            <div className="notification-icon">👥</div>
-                                            <div className="notification-details">
-                                                <p className="notification-message">New comment on your research</p>
-                                                <span className="notification-time">1 hour ago</span>
+                                            <div className="notification-actions" onClick={e => e.stopPropagation()}>
+                                                <button 
+                                                    className="action-btn view" 
+                                                    title="View" 
+                                                    onClick={() => handleView(notif)}
+                                                >
+                                                    <Eye size={15} />
+                                                </button>
+                                                <button 
+                                                    className="action-btn read" 
+                                                    title="Mark as Read" 
+                                                    onClick={(e) => handleMarkRead(e, notif.notification_id)} 
+                                                    disabled={notif.is_read}
+                                                >
+                                                    <CheckCircle size={15} />
+                                                </button>
+                                                <button 
+                                                    className="action-btn delete" 
+                                                    title="Delete" 
+                                                    onClick={(e) => handleDelete(e, notif.notification_id)}
+                                                >
+                                                    <Trash2 size={15} />
+                                                </button>
                                             </div>
-                                            <NotificationActions />
                                         </div>
-                                    </div>
-                                </div>
-                            )}
-                            
-                            {activeTab === 'unread' && (
-                                <div className="tab-content active">
-                                    <div className="notification-list">
-                                        <div className="notification-item unread">
-                                            <div className="notification-icon">📄</div>
-                                            <div className="notification-details">
-                                                <p className="notification-message">Your research paper has been reviewed</p>
-                                                <span className="notification-time">2 minutes ago</span>
-                                            </div>
-                                            <NotificationActions />
-                                        </div>
-                                        {/* ... other unread items */}
-                                    </div>
+                                    ))}
                                 </div>
                             )}
                         </div>

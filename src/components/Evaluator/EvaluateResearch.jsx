@@ -3,18 +3,24 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { UserAuth } from "../../context/AuthContext";
 import { supabase } from "../../supabaseClient";
 import Navbar from "./EvaluatorNavbar";
-import { FileText } from "lucide-react"; // ✅ ADD THIS IMPORT
+import { FileText } from "lucide-react";
 import "./EvaluateResearch.css";
 
 function EvaluateResearch() {
     const { researchId } = useParams();
     const navigate = useNavigate();
-    const { dbId } = UserAuth();
+    const { user: authUser } = UserAuth();
     const leftCardRef = useRef(null);
     const [leftCardHeight, setLeftCardHeight] = useState(0);
     const [research, setResearch] = useState(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [evaluatorId, setEvaluatorId] = useState(null);
+    const [evaluatorInfo, setEvaluatorInfo] = useState({
+        name: '',
+        email: ''
+    });
+    const [debugInfo, setDebugInfo] = useState({}); // For debugging
     const [evaluation, setEvaluation] = useState({
         scientificRigor: "",
         ethicalCompliance: "",
@@ -25,6 +31,126 @@ function EvaluateResearch() {
         recommendation: "",
         overallComments: "",
     });
+
+    // Fetch evaluator directly with full debugging
+    useEffect(() => {
+        const fetchEvaluatorWithDebug = async () => {
+            console.log('=== STARTING EVALUATOR FETCH WITH DEBUG ===');
+            
+            // Method 1: Try to get user from AuthContext
+            console.log('1. AuthContext user:', authUser);
+            console.log('   - user object keys:', authUser ? Object.keys(authUser) : 'null');
+            console.log('   - user?.id:', authUser?.id);
+            console.log('   - user?.user_id:', authUser?.user_id);
+            
+            // Method 2: Get session directly from Supabase
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            
+            if (sessionError) {
+                console.error('Session error:', sessionError);
+                setDebugInfo(prev => ({ ...prev, sessionError: sessionError.message }));
+                return;
+            }
+            
+            if (!session) {
+                console.error('No active session found');
+                setDebugInfo(prev => ({ ...prev, error: 'No active session' }));
+                return;
+            }
+            
+            const authUserId = session.user.id;
+            const authEmail = session.user.email;
+            console.log('2. Session user from Supabase:', { 
+                authUserId, 
+                authEmail,
+                userMetadata: session.user.user_metadata 
+            });
+            
+            setDebugInfo(prev => ({ 
+                ...prev, 
+                sessionUserId: authUserId,
+                sessionEmail: authEmail 
+            }));
+            
+            try {
+                // Step 1: Check Evaluator table
+                console.log('3. Querying Evaluator table with user_id:', authUserId);
+                const { data: evaluatorData, error: evaluatorError } = await supabase
+                    .from('Evaluator')
+                    .select('evaluator_id, user_id')
+                    .eq('user_id', authUserId)
+                    .maybeSingle();
+
+                if (evaluatorError) {
+                    console.error('❌ Evaluator query error:', evaluatorError);
+                    setDebugInfo(prev => ({ ...prev, evaluatorError: evaluatorError.message }));
+                    return;
+                }
+
+                console.log('4. Evaluator query result:', evaluatorData);
+                setDebugInfo(prev => ({ ...prev, evaluatorData }));
+
+                if (!evaluatorData) {
+                    console.error('❌ No evaluator record found for user_id:', authUserId);
+                    
+                    // Let's check what evaluators DO exist
+                    const { data: allEvaluators, error: listError } = await supabase
+                        .from('Evaluator')
+                        .select('evaluator_id, user_id')
+                        .limit(5);
+                    
+                    console.log('First 5 evaluators in table:', allEvaluators);
+                    setDebugInfo(prev => ({ 
+                        ...prev, 
+                        error: `No evaluator record for ${authUserId}`,
+                        sampleEvaluators: allEvaluators 
+                    }));
+                    return;
+                }
+
+                setEvaluatorId(evaluatorData.evaluator_id);
+                console.log('✅ Set evaluatorId:', evaluatorData.evaluator_id);
+
+                // Step 2: Get user details from Users table
+                console.log('5. Querying Users table with user_id:', authUserId);
+                const { data: userData, error: userError } = await supabase
+                    .from('Users')
+                    .select('first_name, last_name, email')
+                    .eq('user_id', authUserId)
+                    .maybeSingle();
+
+                if (userError) {
+                    console.error('❌ Users query error:', userError);
+                    setDebugInfo(prev => ({ ...prev, userError: userError.message }));
+                }
+
+                console.log('6. Users query result:', userData);
+                setDebugInfo(prev => ({ ...prev, userData }));
+
+                if (userData) {
+                    const fullName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim();
+                    setEvaluatorInfo({
+                        name: fullName || 'Evaluator',
+                        email: userData.email || authEmail || ''
+                    });
+                    console.log('✅ Set evaluator info from Users table:', { name: fullName, email: userData.email });
+                } else {
+                    console.warn('⚠️ No user record in Users table, using auth data');
+                    setEvaluatorInfo({
+                        name: session.user.user_metadata?.full_name || 'Evaluator',
+                        email: authEmail || ''
+                    });
+                    setDebugInfo(prev => ({ ...prev, warning: 'User not found in Users table' }));
+                }
+
+            } catch (error) {
+                console.error('❌ Unexpected error:', error);
+                setDebugInfo(prev => ({ ...prev, unexpectedError: error.message }));
+            }
+        };
+
+        fetchEvaluatorWithDebug();
+    }, [authUser]);
 
     useEffect(() => {
         if (researchId) {
@@ -44,86 +170,81 @@ function EvaluateResearch() {
         return () => window.removeEventListener('resize', updateHeight);
     }, [loading, research]);
 
-  const fetchResearchDetails = async () => {
-    try {
-        const { data: basicData, error: basicError } = await supabase
-            .from('Research')
-            .select('*')
-            .eq('research_id', researchId)
-            .single();
-        
-        if (basicError) {
-            console.error('Error fetching basic research:', basicError);
-            setResearch(null);
-            setLoading(false);
-            return;
-        }
-        
-        if (!basicData) {
-            console.log('❌ No research found with ID:', researchId);
-            setResearch(null);
-            setLoading(false);
-            return;
-        }
-
-        const { data, error } = await supabase
-            .from('Research')
-            .select(`
-                *,
-                research_files ( 
-                    file_url, 
-                    file_type,
-                    file_name 
-                ),
-                Researcher:researcher_id (
-                    researcher_id,
-                    user_id,
-                    User:user_id (
-                        first_name,
-                        last_name,
-                        email
-                    )
-                )
-            `)
-            .eq('research_id', researchId)
-            .single();
-
-        console.log('Full research data:', data);
-        console.log('Full research error:', error);
-
-        if (error) {
-            console.error('Error fetching full research:', error);
-            // Use basic data if join fails
-            setResearch(basicData);
-            setLoading(false);
-            return;
-        }
-        
-        if (data) {
-            const researcher = data.Researcher;
-            const user = researcher?.User;
+    const fetchResearchDetails = async () => {
+        try {
+            const { data: basicData, error: basicError } = await supabase
+                .from('Research')
+                .select('*')
+                .eq('research_id', researchId)
+                .single();
             
-            data.author = user 
-                ? `${user.first_name || ''} ${user.last_name || ''}`.trim() 
-                : 'Unknown Author';
-            data.author_email = user?.email || 'No email';
+            if (basicError) {
+                console.error('Error fetching basic research:', basicError);
+                setResearch(null);
+                setLoading(false);
+                return;
+            }
+            
+            if (!basicData) {
+                console.log('❌ No research found with ID:', researchId);
+                setResearch(null);
+                setLoading(false);
+                return;
+            }
+
+            const { data, error } = await supabase
+                .from('Research')
+                .select(`
+                    *,
+                    research_files ( 
+                        file_url, 
+                        file_type
+                    ),
+                    Researcher:researcher_id (
+                        researcher_id,
+                        user_id,
+                        Users!inner (
+                            first_name,
+                            last_name,
+                            email
+                        )
+                    )
+                `)
+                .eq('research_id', researchId)
+                .single();
+
+            if (error) {
+                console.error('Error fetching full research:', error);
+                setResearch(basicData);
+                setLoading(false);
+                return;
+            }
+            
+            if (data) {
+                const researcher = data.Researcher;
+                const users = researcher?.Users;
+                
+                data.author = users 
+                    ? `${users.first_name || ''} ${users.last_name || ''}`.trim() 
+                    : 'Unknown Author';
+                data.author_email = users?.email || 'No email';
+            }
+            
+            setResearch(data || basicData);
+        } catch (error) {
+            console.error("Error fetching research details:", error);
+            setResearch(null);
+        } finally {
+            setLoading(false);
         }
-        
-        setResearch(data || basicData);
-    } catch (error) {
-        console.error("Error fetching research details:", error);
-        setResearch(null);
-    } finally {
-        setLoading(false);
-    }
-};
+    };
 
     const getCleanFileName = (url) => {
         if (!url) return "Unknown File";
         const parts = url.split('/');
-        const fileWithTimestamp = parts[parts.length - 1];
-        const cleanName = fileWithTimestamp.split('_').slice(1).join('_');
-        return cleanName || fileWithTimestamp;
+        const fullFileName = parts[parts.length - 1];
+        const cleanName = fullFileName.split('_').slice(1).join('_');
+        return cleanName || fullFileName || "Unknown File";
     };
 
     const handleDownload = async (fileUrl, fileName) => {
@@ -157,7 +278,13 @@ function EvaluateResearch() {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
+        
         if (submitting) return;
+        
+        if (!evaluatorId) {
+            alert('Evaluator information not found. Please check the debug panel.');
+            return;
+        }
 
         if (
             !evaluation.scientificRigor ||
@@ -173,22 +300,88 @@ function EvaluateResearch() {
         setSubmitting(true);
 
         try {
-            const { error } = await supabase
+            const statusMap = {
+                'Approved':       'Approved',
+                'Minor_revision': 'With Minor Revisions',
+                'Major_revision': 'With Major Revisions',
+                'Rejected':       'Rejected',
+            };
+            const newStatus = statusMap[evaluation.recommendation];
+
+            const { error: evalError } = await supabase
                 .from('Evaluation_Research')
                 .insert([{
-                    research_id: Number(researchId),
-                    evaluator_id: Number(dbId),
-                    sci_rigor: Number(evaluation.scientificRigor),
-                    relevant_to_hru_obj: Number(evaluation.relevance),
-                    ethical_compliance: Number(evaluation.ethicalCompliance),
-                    methodology: evaluation.methodology,
-                    strengths: evaluation.strengths,
-                    weaknesses: evaluation.weaknesses,
+                    research_id:            Number(researchId),
+                    evaluator_id:           evaluatorId,
+                    sci_rigor:              Number(evaluation.scientificRigor),
+                    relevant_to_hru_obj:    Number(evaluation.relevance),
+                    ethical_compliance:     Number(evaluation.ethicalCompliance),
+                    methodology:            evaluation.methodology,
+                    strengths:              evaluation.strengths,
+                    weaknesses:             evaluation.weaknesses,
                     overall_recommendation: evaluation.recommendation,
-                    additional_comments: evaluation.overallComments
+                    additional_comments:    evaluation.overallComments
                 }]);
 
-            if (error) throw error;
+            if (evalError) throw evalError;
+
+            const { error: statusError } = await supabase
+                .from('Research')
+                .update({ status: newStatus })
+                .eq('research_id', Number(researchId));
+
+            if (statusError) throw statusError;
+
+            const notesText = [
+                `Evaluator: ${evaluatorInfo.name} (${evaluatorInfo.email})`,
+                evaluation.overallComments,
+                evaluation.strengths ? `Strengths: ${evaluation.strengths}` : null,
+                evaluation.weaknesses ? `Weaknesses: ${evaluation.weaknesses}` : null,
+            ].filter(Boolean).join('\n\n') || 'No additional comments provided.';
+
+            const { data: logData, error: logError } = await supabase
+                .from('ResearchActivityLog')
+                .insert([{
+                    research_id: Number(researchId),
+                    actor_id:    evaluatorId,
+                    actor_role:  'evaluator',
+                    action:      'evaluated',
+                    notes:       notesText,
+                }])
+                .select()
+                .single();
+
+            if (logError) throw logError;
+
+            const researcherAuthUUID = research.Researcher?.user_id;
+
+            if (!researcherAuthUUID) {
+                const { data: researcherData, error: researcherError } = await supabase
+                    .from('Researcher')
+                    .select('user_id')
+                    .eq('researcher_id', research.researcher_id)
+                    .single();
+
+                if (researcherError || !researcherData) throw new Error("Could not find researcher to notify.");
+
+                await supabase
+                    .from('researcher_notifications')
+                    .insert([{
+                        recipient_id: researcherData.user_id,
+                        research_id:  Number(researchId),
+                        log_id:       logData.log_id,
+                        message:      `Your research "${research.title}" has been evaluated by ${evaluatorInfo.name}. Status: ${newStatus}.`,
+                    }]);
+            } else {
+                await supabase
+                    .from('researcher_notifications')
+                    .insert([{
+                        recipient_id: researcherAuthUUID,
+                        research_id:  Number(researchId),
+                        log_id:       logData.log_id,
+                        message:      `Your research "${research.title}" has been evaluated by ${evaluatorInfo.name}. Status: ${newStatus}.`,
+                    }]);
+            }
 
             alert('Evaluation submitted successfully.');
             navigate('/evaluator-dashboard');
@@ -201,11 +394,40 @@ function EvaluateResearch() {
         }
     };
 
+    // Debug Panel Component
+    const DebugPanel = () => (
+        <div style={{ 
+            position: 'fixed', 
+            bottom: 10, 
+            right: 10, 
+            background: '#1a1a1a', 
+            color: '#0f0', 
+            padding: 10, 
+            zIndex: 9999, 
+            fontSize: 11, 
+            fontFamily: 'monospace',
+            maxWidth: 400,
+            maxHeight: 300,
+            overflow: 'auto',
+            borderRadius: 5,
+            border: '1px solid #0f0'
+        }}>
+            <strong style={{ color: '#fff' }}>🔍 DEBUG PANEL</strong>
+            <pre style={{ margin: '5px 0', fontSize: 10 }}>{JSON.stringify(debugInfo, null, 2)}</pre>
+            <hr style={{ borderColor: '#333' }} />
+            <div>Evaluator ID: <strong style={{ color: '#0f0' }}>{evaluatorId || '❌ null'}</strong></div>
+            <div>Evaluator Name: {evaluatorInfo.name || '❌ null'}</div>
+            <div>Evaluator Email: {evaluatorInfo.email || '❌ null'}</div>
+            <div>AuthContext User: {authUser ? JSON.stringify(authUser).substring(0, 100) : 'null'}</div>
+        </div>
+    );
+
     if (loading) return <div className="evaluate-loading">Loading research details...</div>;
     if (!research) return <div className="evaluate-loading">Research not found</div>;
 
     return (
         <div className="evaluate-page">
+            <DebugPanel /> {/* Debug panel shows what's happening */}
             <Navbar />
 
             <main className="evaluate-container">
@@ -228,8 +450,18 @@ function EvaluateResearch() {
                     </div>
                 </section>
 
+                {evaluatorInfo.name && (
+                    <div className="evaluator-info-banner">
+                        <div className="evaluator-info-content">
+                            <strong>Evaluating as:</strong>
+                            <span>{evaluatorInfo.name}</span>
+                            <span>({evaluatorInfo.email})</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Rest of your JSX remains the same */}
                 <div className="evaluate-grid">
-                    {/* Left sidebar with research summary */}
                     <aside ref={leftCardRef} className="research-summary-card">
                         <div className="summary-header">
                             <span className="summary-status">
@@ -264,7 +496,6 @@ function EvaluateResearch() {
                             </div>
                         </div>
 
-                        {/* Research Files Section - NEW */}
                         <div className="research-files-section">
                             <h3>Submitted Files</h3>
                             <div className="file-list">
@@ -315,117 +546,59 @@ function EvaluateResearch() {
                         <form className="evaluate-form" onSubmit={handleSubmit}>
                             <div className="evaluate-form-grid">
                                 <div className="evaluate-input-group">
-                                    <label>
-                                        Scientific Rigor <span className="required">*</span>
-                                    </label>
+                                    <label>Scientific Rigor <span className="required">*</span></label>
                                     <div className="rating-scale">
                                         {[5, 4, 3, 2, 1].map((value) => (
-                                            <label
-                                                key={value}
-                                                className={`rating-option ${evaluation.scientificRigor === String(value) ? 'selected' : ''}`}
-                                            >
-                                                <input
-                                                    type="radio"
-                                                    name="scientificRigor"
-                                                    value={value}
-                                                    checked={evaluation.scientificRigor === String(value)}
-                                                    onChange={handleChange('scientificRigor')}
-                                                />
+                                            <label key={value} className={`rating-option ${evaluation.scientificRigor === String(value) ? 'selected' : ''}`}>
+                                                <input type="radio" name="scientificRigor" value={value} checked={evaluation.scientificRigor === String(value)} onChange={handleChange('scientificRigor')} />
                                                 <span>{value}</span>
                                             </label>
                                         ))}
                                     </div>
-                                    <div className="rating-help">1 = Poor, 5 = Excellent</div>
                                 </div>
 
                                 <div className="evaluate-input-group">
-                                    <label>
-                                        Ethical Compliance <span className="required">*</span>
-                                    </label>
+                                    <label>Ethical Compliance <span className="required">*</span></label>
                                     <div className="rating-scale">
                                         {[5, 4, 3, 2, 1].map((value) => (
-                                            <label
-                                                key={value}
-                                                className={`rating-option ${evaluation.ethicalCompliance === String(value) ? 'selected' : ''}`}
-                                            >
-                                                <input
-                                                    type="radio"
-                                                    name="ethicalCompliance"
-                                                    value={value}
-                                                    checked={evaluation.ethicalCompliance === String(value)}
-                                                    onChange={handleChange('ethicalCompliance')}
-                                                />
+                                            <label key={value} className={`rating-option ${evaluation.ethicalCompliance === String(value) ? 'selected' : ''}`}>
+                                                <input type="radio" name="ethicalCompliance" value={value} checked={evaluation.ethicalCompliance === String(value)} onChange={handleChange('ethicalCompliance')} />
                                                 <span>{value}</span>
                                             </label>
                                         ))}
                                     </div>
-                                    <div className="rating-help">1 = Not compliant, 5 = Fully compliant</div>
                                 </div>
 
                                 <div className="evaluate-input-group">
-                                    <label>
-                                        Relevance to HRU Objectives <span className="required">*</span>
-                                    </label>
+                                    <label>Relevance to HRU Objectives <span className="required">*</span></label>
                                     <div className="rating-scale">
                                         {[5, 4, 3, 2, 1].map((value) => (
-                                            <label
-                                                key={value}
-                                                className={`rating-option ${evaluation.relevance === String(value) ? 'selected' : ''}`}
-                                            >
-                                                <input
-                                                    type="radio"
-                                                    name="relevance"
-                                                    value={value}
-                                                    checked={evaluation.relevance === String(value)}
-                                                    onChange={handleChange('relevance')}
-                                                />
+                                            <label key={value} className={`rating-option ${evaluation.relevance === String(value) ? 'selected' : ''}`}>
+                                                <input type="radio" name="relevance" value={value} checked={evaluation.relevance === String(value)} onChange={handleChange('relevance')} />
                                                 <span>{value}</span>
                                             </label>
                                         ))}
                                     </div>
-                                    <div className="rating-help">1 = Not relevant, 5 = Highly relevant</div>
                                 </div>
 
                                 <div className="evaluate-input-group">
-                                    <label>
-                                        Methodology & Feasibility <span className="required">*</span>
-                                    </label>
-                                    <textarea
-                                        rows="4"
-                                        value={evaluation.methodology}
-                                        onChange={handleChange('methodology')}
-                                        placeholder="Assess the study design, sample, analysis plan, and overall feasibility."
-                                    />
+                                    <label>Methodology & Feasibility <span className="required">*</span></label>
+                                    <textarea rows="4" value={evaluation.methodology} onChange={handleChange('methodology')} placeholder="Assess the study design, sample, analysis plan, and overall feasibility." />
                                 </div>
 
                                 <div className="evaluate-input-group evaluate-full">
                                     <label>Strengths</label>
-                                    <textarea
-                                        rows="4"
-                                        value={evaluation.strengths}
-                                        onChange={handleChange('strengths')}
-                                        placeholder="Summarize the key strengths of the research."
-                                    />
+                                    <textarea rows="4" value={evaluation.strengths} onChange={handleChange('strengths')} placeholder="Summarize the key strengths of the research." />
                                 </div>
 
                                 <div className="evaluate-input-group evaluate-full">
                                     <label>Weaknesses</label>
-                                    <textarea
-                                        rows="4"
-                                        value={evaluation.weaknesses}
-                                        onChange={handleChange('weaknesses')}
-                                        placeholder="List the areas that need improvement or clarification."
-                                    />
+                                    <textarea rows="4" value={evaluation.weaknesses} onChange={handleChange('weaknesses')} placeholder="List the areas that need improvement or clarification." />
                                 </div>
 
                                 <div className="evaluate-input-group evaluate-full">
-                                    <label>
-                                        Overall Recommendation <span className="required">*</span>
-                                    </label>
-                                    <select
-                                        value={evaluation.recommendation}
-                                        onChange={handleChange('recommendation')}
-                                    >
+                                    <label>Overall Recommendation <span className="required">*</span></label>
+                                    <select value={evaluation.recommendation} onChange={handleChange('recommendation')}>
                                         <option value="">Select recommendation</option>
                                         <option value="Approved">Approved</option>
                                         <option value="Minor_revision">Minor Revision</option>
@@ -436,24 +609,13 @@ function EvaluateResearch() {
 
                                 <div className="evaluate-input-group evaluate-full">
                                     <label>Additional Comments</label>
-                                    <textarea
-                                        rows="5"
-                                        value={evaluation.overallComments}
-                                        onChange={handleChange('overallComments')}
-                                        placeholder="Add any final remarks, clarifications, or recommended next steps."
-                                    />
+                                    <textarea rows="5" value={evaluation.overallComments} onChange={handleChange('overallComments')} placeholder="Add any final remarks, clarifications, or recommended next steps." />
                                 </div>
                             </div>
 
                             <div className="evaluate-form-actions">
-                                <button
-                                    type="button"
-                                    className="btn-secondary"
-                                    onClick={() => navigate('/evaluator-dashboard')}
-                                >
-                                    Cancel
-                                </button>
-                                <button type="submit" className="btn-primary">
+                                <button type="button" className="btn-secondary" onClick={() => navigate('/evaluator-dashboard')}>Cancel</button>
+                                <button type="submit" className="btn-primary" disabled={submitting}>
                                     {submitting ? 'Submitting...' : 'Submit Evaluation'}
                                 </button>
                             </div>

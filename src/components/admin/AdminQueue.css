@@ -1,3 +1,5 @@
+/* AdminQueue.css - Matching MasterInventory Styling including Add Evaluator Modal */
+
 /* Layout & Container */
 .admin-layout {
     display: flex;
@@ -23,6 +25,7 @@
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 30px;
+    width: 100%;
 }
 
 .header-left h1 {
@@ -179,7 +182,7 @@
     padding: 8px;
     cursor: pointer;
     color: #4b5563;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
@@ -212,7 +215,6 @@
     right: 0;
     bottom: 0;
     background-color: rgba(49, 52, 79, 0.6);
-    /* Navy tint opacity */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -220,15 +222,25 @@
     backdrop-filter: blur(4px);
 }
 
-/* Modal Content Card */
+/* Modal Content Card - Generic */
 .admin-modal {
     background: #ffffff;
-    width: 90%;
+    width: 100%;
     max-width: 800px;
     max-height: 85vh;
     border-radius: 20px;
     overflow-y: auto;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    padding-bottom: 20px;
+}
+
+.assign-modal .detail-section:last-of-type {
+    padding: 30px;
+}
+
+.detail-section:last-child {
+    margin-bottom: 0;
+    padding: 30px;
 }
 
 .modal-header {
@@ -252,6 +264,209 @@
     font-size: 1.5rem;
 }
 
+/* Add Evaluator Modal Specific Styles - ENLARGED VERSION */
+.assign-modal {
+    max-width: 900px;
+    /* Increased from 520px to 900px */
+    width: 100%;
+}
+
+.assign-subtitle {
+    font-size: 13px;
+    color: #888;
+    margin: 2px 0 0;
+    font-weight: 400;
+}
+
+.assign-hint {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 16px;
+}
+
+.already-assigned-note {
+    color: #7c3aed;
+    font-weight: 500;
+}
+
+/* Evaluator Checklist - ENLARGED */
+.evaluator-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    /* Increased from 8px */
+    max-height: 450px;
+    /* Increased from 320px */
+    overflow-y: auto;
+    margin-bottom: 24px;
+    /* Increased from 20px */
+}
+
+.evaluator-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    /* Increased from 12px */
+    padding: 16px 20px;
+    /* Increased from 12px 14px */
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    /* Increased from 8px */
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+}
+
+.evaluator-item:hover {
+    background: #f9f9f9;
+    border-color: #c4b5fd;
+}
+
+.evaluator-item.selected {
+    background: #f5f3ff;
+    border-color: #7c3aed;
+}
+
+.evaluator-checkbox {
+    width: 24px;
+    /* Increased from 20px */
+    height: 24px;
+    /* Increased from 20px */
+    border-radius: 6px;
+    /* Increased from 5px */
+    border: 2px solid #d1d5db;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s;
+    color: white;
+}
+
+.evaluator-checkbox.checked {
+    background: #7c3aed;
+    border-color: #7c3aed;
+}
+
+.evaluator-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.evaluator-name {
+    font-size: 16px;
+    /* Increased from 14px */
+    font-weight: 600;
+    /* Increased from 500 */
+    color: #111;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    /* Increased from 8px */
+    margin-bottom: 4px;
+}
+
+.evaluator-email {
+    font-size: 13px;
+    /* Increased from 12px */
+    color: #888;
+}
+
+.assigned-tag {
+    font-size: 11px;
+    background: #ede9fe;
+    color: #7c3aed;
+    padding: 2px 8px;
+    /* Adjusted padding */
+    border-radius: 99px;
+    font-weight: 500;
+}
+
+/* Assign Actions Footer - ENLARGED */
+.assign-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 20px;
+    /* Increased from 16px */
+    border-top: 1px solid #f0f0f0;
+}
+
+.selected-count {
+    font-size: 14px;
+    /* Increased from 13px */
+    font-weight: 500;
+    color: #666;
+}
+
+.assign-btns {
+    display: flex;
+    gap: 12px;
+    /* Increased from 8px */
+}
+
+.cancel-assign-btn {
+    padding: 10px 20px;
+    /* Increased from 8px 16px */
+    border: 1px solid #e0e0e0;
+    background: #fff;
+    border-radius: 8px;
+    /* Increased from 6px */
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #555;
+    transition: all 0.15s;
+}
+
+.cancel-assign-btn:hover {
+    background: #f5f5f5;
+}
+
+.save-assign-btn {
+    padding: 10px 24px;
+    /* Increased from 8px 18px */
+    border: none;
+    background: #7c3aed;
+    color: #fff;
+    border-radius: 8px;
+    /* Increased from 6px */
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    /* Increased from 500 */
+    transition: all 0.15s;
+}
+
+.save-assign-btn:hover:not(:disabled) {
+    background: #6d28d9;
+}
+
+.save-assign-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.evaluator-item.already-in {
+    opacity: 0.6;
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.evaluator-item.already-in .evaluator-name {
+    text-decoration: line-through;
+    color: #94a3b8;
+}
+
+.strike-out {
+    text-decoration: line-through;
+    color: #94a3b8;
+    opacity: 0.7;
+}
+
+/* Detail Sections (if used) */
 .detail-section {
     padding: 20px 30px;
     border-bottom: 1px solid #f8f8f8;
@@ -303,6 +518,7 @@
     border-color: #cbd5e1;
 }
 
+/* Pagination */
 .pagination-wrapper {
     display: flex;
     align-items: center;
@@ -357,7 +573,7 @@
     font-size: 14px;
 }
 
-/* ── Assign button color ── */
+/* Assign button color */
 .assign-btn {
     color: #7c3aed;
 }
@@ -366,188 +582,155 @@
     background: #f5f3ff;
 }
 
-/* ── Assign Modal ── */
-.assign-modal {
-    max-width: 520px;
-    width: 100%;
+/* Responsive adjustments for larger modal */
+@media (max-width: 1024px) {
+    .assign-modal {
+        max-width: 800px;
+    }
 }
 
-.assign-subtitle {
-    font-size: 13px;
-    color: #888;
-    margin: 2px 0 0;
-    font-weight: 400;
+@media (max-width: 768px) {
+    .assign-modal {
+        max-width: 95%;
+        margin: 0 20px;
+    }
+
+    .evaluator-item {
+        padding: 12px 16px;
+    }
+
+    .evaluator-name {
+        font-size: 14px;
+    }
 }
 
-.assign-hint {
-    font-size: 13px;
-    color: #666;
-    margin-bottom: 16px;
-}
+/* Add these styles to your AdminQueue.css file */
 
-.already-assigned-note {
-    color: #7c3aed;
-    font-weight: 500;
-}
-
-/* ── Evaluator Checklist ── */
-.evaluator-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 320px;
-    overflow-y: auto;
-    margin-bottom: 20px;
-}
-
-.evaluator-item {
+/* Queue Stats Badge */
+.queue-stats {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.15s;
-    user-select: none;
 }
 
-.evaluator-item:hover {
-    background: #f9f9f9;
+.stat-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    padding: 8px 16px;
+    border-radius: 40px;
+    border: 1px solid #e2e8f0;
+    font-weight: 600;
+    color: #31344F;
+    font-size: 14px;
+}
+
+/* Evaluators Container - FIX for name spacing */
+.evaluators-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.evaluator-chip {
+    display: inline-flex;
+    align-items: center;
+    background: #f1f5f9;
+    padding: 6px 12px;
+    border-radius: 24px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #1e293b;
+    line-height: 1.2;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    border: 1px solid #e2e8f0;
+    cursor: default;
+}
+
+.evaluator-chip:hover {
+    background: #e2e8f0;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.evaluator-chip[data-status="assigned"] {
+    background: #ede9fe;
+    color: #6d28d9;
     border-color: #c4b5fd;
 }
 
-.evaluator-item.selected {
-    background: #f5f3ff;
-    border-color: #7c3aed;
-}
-
-.evaluator-checkbox {
-    width: 20px;
-    height: 20px;
-    border-radius: 5px;
-    border: 2px solid #d1d5db;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: all 0.15s;
-    color: white;
-}
-
-.evaluator-checkbox.checked {
-    background: #7c3aed;
-    border-color: #7c3aed;
-}
-
-.evaluator-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.evaluator-name {
-    font-size: 14px;
-    font-weight: 500;
-    color: #111;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.evaluator-email {
+.no-evaluators {
+    color: #94a3b8;
     font-size: 12px;
-    color: #888;
+    font-style: italic;
 }
 
-.assigned-tag {
-    font-size: 11px;
-    background: #ede9fe;
-    color: #7c3aed;
-    padding: 2px 7px;
-    border-radius: 99px;
+/* Title cell styling */
+.title-cell {
+    max-width: 350px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* HRU cell styling */
+.hru-cell {
+    color: #6B7280;
+    font-size: 0.85rem;
     font-weight: 500;
+    white-space: nowrap;
 }
 
-/* ── Assign Actions Footer ── */
-.assign-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-top: 16px;
-    border-top: 1px solid #f0f0f0;
+/* Loading and empty states */
+.loading-state,
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #64748b;
 }
 
-.selected-count {
-    font-size: 13px;
-    color: #666;
+.empty-subtitle {
+    font-size: 0.875rem;
+    color: #94a3b8;
+    margin-top: 8px;
 }
 
-.assign-btns {
-    display: flex;
-    gap: 8px;
-}
-
-.cancel-assign-btn {
-    padding: 8px 16px;
-    border: 1px solid #e0e0e0;
-    background: #fff;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    color: #555;
-    transition: all 0.15s;
-}
-
-.cancel-assign-btn:hover {
-    background: #f5f5f5;
-}
-
-.save-assign-btn {
-    padding: 8px 18px;
+/* Close modal button */
+.close-modal-btn {
+    background: transparent;
     border: none;
-    background: #7c3aed;
-    color: #fff;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.15s;
+    padding: 4px;
 }
 
-.save-assign-btn:hover:not(:disabled) {
-    background: #6d28d9;
+.close-modal-btn:hover {
+    background: #f1f5f9;
+    transform: none;
 }
 
-.save-assign-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .admin-content {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
 
-.evaluator-item.already-in {
-    opacity: 0.6;
-    background-color: #f8f9fa;
-    cursor: not-allowed;
-    pointer-events: none;
-}
+    .header {
+        flex-direction: column;
+        gap: 16px;
+    }
 
-.evaluator-item.already-in .evaluator-name {
-    text-decoration: line-through;
-    color: #94a3b8;
-}
+    .table-container {
+        overflow-x: auto;
+    }
 
-.assigned-tag {
-    margin-left: 8px;
-    font-size: 0.7rem;
-    background-color: #dcfce7;
-    color: #166534;
-    padding: 2px 6px;
-    border-radius: 4px;
-    text-decoration: none !important;
-    display: inline-block;
-}
+    .user-table {
+        min-width: 800px;
+    }
 
-.strike-out {
-    text-decoration: line-through;
-    color: #94a3b8;
-    opacity: 0.7;
+    .evaluator-chip {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
 }

@@ -1,60 +1,53 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
-import { Search, Filter, Eye, X, FileText, Download, UserPlus, Check } from 'lucide-react';
+import { Search, Filter, Eye, X, FileText, Download, Users, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
 import AdminNavbar from "./AdminNavbar";
 import "./AdminMasterInventory.css";
 
 const ITEMS_PER_PAGE = 10;
 
 export default function AdminMasterInventory() {
-    // List States
     const [researches, setResearches] = useState([]);
     const [filteredResearches, setFilteredResearches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
-
-    // Pagination States
     const [currentPage, setCurrentPage] = useState(1);
-
-    // Detail/Modal States
     const [selectedStudy, setSelectedStudy] = useState(null);
     const [studyDetails, setStudyDetails] = useState({
-        coauthors: [], bio: null, dept: null, hraa: null, files: [], evaluators: []
+        coauthors: [], bio: null, dept: null, hraa: null, files: [], evaluations: []
     });
     const [isModalOpen, setIsModalOpen] = useState(false);
-
-    // Evaluator Assignment States
-    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-    const [assignTarget, setAssignTarget] = useState(null);
-    const [evaluators, setEvaluators] = useState([]);
-    const [selectedEvaluatorIds, setSelectedEvaluatorIds] = useState([]);
-    const [alreadyAssigned, setAlreadyAssigned] = useState([]);
-    const [assignLoading, setAssignLoading] = useState(false);
-    const [assignSaving, setAssignSaving] = useState(false);
 
     useEffect(() => {
         loadMasterData();
     }, []);
 
-    // Filter Logic
     useEffect(() => {
-        let result = researches;
+        let result = [...researches];
+
         if (filterStatus !== 'all') {
-            result = result.filter(r => r.status?.toLowerCase() === filterStatus.toLowerCase());
+            result = result.filter(r => {
+                if (filterStatus === 'approved') return r.current_status === 'approved';
+                if (filterStatus === 'rejected') return r.current_status === 'rejected';
+                if (filterStatus === 'revision') return r.current_status === 'revision';
+                return true;
+            });
         }
+
         if (searchTerm) {
             result = result.filter(r =>
                 r.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                r.author_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                r.hru_no?.toLowerCase().includes(searchTerm.toLowerCase())
+                r.researcher_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                r.hru_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                r.evaluators?.some(e => e.name?.toLowerCase().includes(searchTerm.toLowerCase()))
             );
         }
+
         setFilteredResearches(result);
         setCurrentPage(1);
     }, [searchTerm, filterStatus, researches]);
 
-    // Pagination Derived Data
     const totalPages = Math.ceil(filteredResearches.length / ITEMS_PER_PAGE);
     const paginatedResearches = filteredResearches.slice(
         (currentPage - 1) * ITEMS_PER_PAGE,
@@ -64,27 +57,163 @@ export default function AdminMasterInventory() {
     async function loadMasterData() {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('research_with_authors')
+            // Step 1: Get all Evaluation_Research entries
+            const { data: evaluationsData, error: evalError } = await supabase
+                .from('Evaluation_Research')
                 .select('*')
-                .order('registration_date', { ascending: false });
-            if (error) throw error;
-            setResearches(data || []);
+                .order('evaluated_at', { ascending: false });
+
+            if (evalError) throw evalError;
+
+            if (!evaluationsData || evaluationsData.length === 0) {
+                setResearches([]);
+                setLoading(false);
+                return;
+            }
+
+            // Step 2: Get unique research IDs
+            const researchIds = [...new Set(evaluationsData.map(er => er.research_id))];
+
+            // Step 3: Get research details with author info
+            const { data: researchData, error: researchError } = await supabase
+                .from('Research')
+                .select(`
+                    *,
+                    Researcher (
+                        researcher_id,
+                        user_id
+                    )
+                `)
+                .in('research_id', researchIds);
+
+            if (researchError) throw researchError;
+
+            // Step 4: Get all researcher user details
+            const researcherIds = researchData.map(r => r.Researcher?.user_id).filter(id => id);
+            let researcherUsersMap = {};
+
+            if (researcherIds.length > 0) {
+                const { data: usersData, error: usersError } = await supabase
+                    .from('Users')
+                    .select('user_id, first_name, last_name, email')
+                    .in('user_id', researcherIds);
+
+                if (!usersError && usersData) {
+                    researcherUsersMap = {};
+                    usersData.forEach(user => {
+                        researcherUsersMap[user.user_id] = user;
+                    });
+                }
+            }
+
+            // Step 5: Get all evaluator details
+            const evaluatorIds = [...new Set(evaluationsData.map(er => er.evaluator_id).filter(id => id))];
+            let evaluatorUsersMap = {};
+
+            if (evaluatorIds.length > 0) {
+                const { data: evaluatorsData, error: evaluatorsError } = await supabase
+                    .from('Evaluator')
+                    .select('evaluator_id, user_id')
+                    .in('evaluator_id', evaluatorIds);
+
+                if (!evaluatorsError && evaluatorsData) {
+                    const userIds = evaluatorsData.map(ev => ev.user_id).filter(id => id);
+
+                    if (userIds.length > 0) {
+                        const { data: usersData, error: usersError } = await supabase
+                            .from('Users')
+                            .select('user_id, first_name, last_name, email')
+                            .in('user_id', userIds);
+
+                        if (!usersError && usersData) {
+                            const userMap = {};
+                            usersData.forEach(user => {
+                                userMap[user.user_id] = user;
+                            });
+
+                            evaluatorsData.forEach(ev => {
+                                if (userMap[ev.user_id]) {
+                                    evaluatorUsersMap[ev.evaluator_id] = userMap[ev.user_id];
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Step 6: Group evaluations by research_id
+            const evaluationsByResearch = {};
+            evaluationsData.forEach(evaluation => {
+                if (!evaluationsByResearch[evaluation.research_id]) {
+                    evaluationsByResearch[evaluation.research_id] = [];
+                }
+
+                const evaluatorUser = evaluatorUsersMap[evaluation.evaluator_id];
+                let evaluatorName = evaluation.evaluator_name;
+                let evaluatorEmail = evaluation.evaluator_email;
+
+                if (evaluatorUser) {
+                    evaluatorName = `${evaluatorUser.first_name} ${evaluatorUser.last_name}`;
+                    evaluatorEmail = evaluatorUser.email;
+                }
+
+                evaluationsByResearch[evaluation.research_id].push({
+                    id: evaluation.evaluator_id,
+                    name: evaluatorName || 'Unknown Evaluator',
+                    email: evaluatorEmail || 'No email',
+                    recommendation: evaluation.overall_recommendation,
+                    evaluation_date: evaluation.evaluated_at,
+                    methodology: evaluation.methodology,
+                    strengths: evaluation.strengths,
+                    weaknesses: evaluation.weaknesses,
+                    comments: evaluation.additional_comments,
+                    scores: {
+                        sci_rigor: evaluation.sci_rigor,
+                        relevant_to_hru_obj: evaluation.relevant_to_hru_obj,
+                        ethical_compliance: evaluation.ethical_compliance
+                    }
+                });
+            });
+
+            // Step 7: Combine research with evaluations
+            const processedResearches = (researchData || []).map(research => {
+                const evaluations = evaluationsByResearch[research.research_id] || [];
+
+                const authorUser = researcherUsersMap[research.Researcher?.user_id];
+                const researcherName = authorUser ?
+                    `${authorUser.first_name} ${authorUser.last_name}` :
+                    'Unknown';
+                const researcherEmail = authorUser?.email;
+
+                const latestEvaluation = evaluations.length > 0 ?
+                    evaluations.reduce((latest, current) =>
+                        new Date(current.evaluation_date) > new Date(latest.evaluation_date) ? current : latest
+                    ) : null;
+
+                return {
+                    ...research,
+                    researcher_name: researcherName,
+                    researcher_email: researcherEmail,
+                    evaluators: evaluations,
+                    current_status: latestEvaluation?.recommendation || 'pending'
+                };
+            });
+
+            setResearches(processedResearches);
         } catch (error) {
-            console.error('Error loading inventory:', error);
+            console.error('Error loading Master Inventory:', error);
+            alert('Failed to load master inventory. Please refresh and try again.');
         } finally {
             setLoading(false);
         }
     }
-
-    // ─── VIEW MODAL ───────────────────────────────────────────────────────────
 
     const handleViewClick = async (study) => {
         setSelectedStudy(study);
         setIsModalOpen(true);
 
         try {
-            const [coauthorsRes, bioRes, deptRes, hraaRes, filesRes, evalRes] = await Promise.all([
+            const [coauthorsRes, bioRes, deptRes, hraaRes, filesRes] = await Promise.all([
                 supabase.from('research_coauthors').select('*').eq('research_id', study.research_id),
                 study.bioinformatics_id
                     ? supabase.from('Bioinformatics').select('*').eq('bioinformatics_id', study.bioinformatics_id).single()
@@ -95,8 +224,7 @@ export default function AdminMasterInventory() {
                 study.hraa_id
                     ? supabase.from('HRAAlignment').select('*').eq('hraa_id', study.hraa_id).single()
                     : Promise.resolve({ data: null }),
-                supabase.from('research_files').select('file_url, file_type').eq('research_id', study.research_id),
-                supabase.from('Evaluation_Research').select('evaluator_name, evaluator_email, overall_recommendation').eq('research_id', study.research_id)
+                supabase.from('research_files').select('file_url, file_type, uploaded_at').eq('research_id', study.research_id)
             ]);
 
             setStudyDetails({
@@ -105,7 +233,7 @@ export default function AdminMasterInventory() {
                 dept: deptRes.data,
                 hraa: hraaRes.data,
                 files: filesRes.data || [],
-                evaluators: evalRes.data || [],
+                evaluations: study.evaluators || []
             });
         } catch (err) {
             console.error("Error fetching detailed research info:", err);
@@ -115,193 +243,65 @@ export default function AdminMasterInventory() {
     const closeModal = () => {
         setIsModalOpen(false);
         setSelectedStudy(null);
-        setStudyDetails({ coauthors: [], bio: null, dept: null, hraa: null, files: [], evaluators: [] });
+        setStudyDetails({ coauthors: [], bio: null, dept: null, hraa: null, files: [], evaluations: [] });
     };
-
-    // ─── EVALUATOR ASSIGNMENT ─────────────────────────────────────────────────
-
-    const handleAssignClick = async (item) => {
-        setAssignTarget(item);
-        setIsAssignModalOpen(true);
-        setAssignLoading(true);
-        setSelectedEvaluatorIds([]);
-
-        try {
-            const [evalRes, alreadyAssignedRes] = await Promise.all([
-                supabase
-                    .from('Evaluator')
-                    .select(`
-                        evaluator_id,
-                        Users (
-                            first_name,
-                            last_name,
-                            email
-                        )
-                    `),
-                supabase
-                    .from('Evaluation_Research')
-                    .select('evaluator_id')
-                    .eq('research_id', item.research_id)
-            ]);
-
-            if (evalRes.error) throw evalRes.error;
-
-            const formattedEvaluators = (evalRes.data || []).map(ev => ({
-                evaluator_id: Number(ev.evaluator_id),
-                first_name: ev.Users?.first_name || 'Unknown',
-                last_name: ev.Users?.last_name || 'User',
-                email: ev.Users?.email || 'No email'
-            }));
-
-            setEvaluators(formattedEvaluators);
-            setAlreadyAssigned(alreadyAssignedRes.data || []);
-
-            const assignedIds = (alreadyAssignedRes.data || []).map(e => Number(e.evaluator_id));
-            setSelectedEvaluatorIds(assignedIds);
-
-        } catch (err) {
-            console.error('Error loading evaluators:', err.message);
-        } finally {
-            setAssignLoading(false);
-        }
-    };
-
-    const closeAssignModal = () => {
-        setIsAssignModalOpen(false);
-        setAssignTarget(null);
-        setEvaluators([]);
-        setSelectedEvaluatorIds([]);
-        setAlreadyAssigned([]);
-    };
-
-    const toggleEvaluator = (id) => {
-        const numId = Number(id);
-        setSelectedEvaluatorIds(prev =>
-            prev.includes(numId)
-                ? prev.filter(item => item !== numId)
-                : [...prev, numId]
-        );
-    };
-
-    const handleSaveAssignments = async () => {
-        if (!assignTarget) return;
-        setAssignSaving(true);
-
-        try {
-            const alreadyInDB = alreadyAssigned.map(e => Number(e.evaluator_id));
-            const currentSelection = selectedEvaluatorIds.map(id => Number(id));
-
-            const toAdd = currentSelection.filter(id => !alreadyInDB.includes(id));
-            const toRemove = alreadyInDB.filter(id => !currentSelection.includes(id));
-
-            const promises = [];
-
-            if (toAdd.length > 0) {
-                const newRows = toAdd.map(id => {
-                    const user = evaluators.find(e => Number(e.evaluator_id) === id);
-                    return {
-                        research_id: assignTarget.research_id,
-                        evaluator_id: id,
-                        evaluator_name: user ? `${user.first_name} ${user.last_name}` : 'Unknown',
-                        evaluator_email: user?.email || '',
-                        sci_rigor: 0,
-                        relevant_to_hru_obj: 0,
-                        ethical_compliance: 0,
-                        methodology: 'EMPTY',
-                        overall_recommendation: 'Pending',
-                    };
-                });
-                promises.push(supabase.from('Evaluation_Research').insert(newRows));
-            }
-
-            if (toRemove.length > 0) {
-                promises.push(
-                    supabase
-                        .from('Evaluation_Research')
-                        .delete()
-                        .eq('research_id', assignTarget.research_id)
-                        .in('evaluator_id', toRemove)
-                );
-            }
-
-            await Promise.all(promises);
-            alert(`Assignments updated successfully.`);
-            await loadMasterData();
-            closeAssignModal();
-        } catch (err) {
-            console.error('Error saving assignments:', err);
-            alert('Failed to save assignments.');
-        } finally {
-            setAssignSaving(false);
-        }
-    };
-
-    // ─── HELPERS ──────────────────────────────────────────────────────────────
 
     const getCleanFileName = (url) => {
         if (!url) return "Unknown File";
         const parts = url.split('/');
-        const fileWithTimestamp = parts[parts.length - 1];
-        return fileWithTimestamp.split('_').slice(1).join('_') || fileWithTimestamp;
+        const fileName = parts[parts.length - 1];
+        return fileName.split('_').slice(1).join('_') || fileName;
     };
 
     const getStatusClass = (status) => {
         const s = status?.toLowerCase();
-        if (s?.includes('approved')) return 'status-approved';
-        if (s?.includes('disapproved') || s?.includes('rejected')) return 'status-rejected';
-        if (s?.includes('revision')) return 'status-revision';
+        if (s === 'approved') return 'status-approved';
+        if (s === 'rejected') return 'status-rejected';
+        if (s === 'revision') return 'status-revision';
         return 'status-pending';
     };
 
-    // ─── PAGINATION ───────────────────────────────────────────────────────────
-
     const renderPagination = () => {
         if (totalPages <= 1) return null;
-        const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter(page =>
-                page === 1 ||
-                page === totalPages ||
-                Math.abs(page - currentPage) <= 1
-            );
 
-        const withEllipsis = pages.reduce((acc, page, idx, arr) => {
-            if (idx > 0 && page - arr[idx - 1] > 1) {
-                acc.push(<span key={`ellipsis-${page}`} className="page-ellipsis">…</span>);
-            }
-            acc.push(
-                <button
-                    key={page}
-                    className={`page-btn ${currentPage === page ? 'active' : ''}`}
-                    onClick={() => setCurrentPage(page)}
-                >
-                    {page}
-                </button>
-            );
-            return acc;
-        }, []);
+        const pages = [];
+        for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+            pages.push(i);
+        }
 
         return (
             <div className="pagination">
                 <button className="page-btn" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>«</button>
                 <button className="page-btn" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>‹</button>
-                {withEllipsis}
+                {pages.map(page => (
+                    <button
+                        key={page}
+                        className={`page-btn ${currentPage === page ? 'active' : ''}`}
+                        onClick={() => setCurrentPage(page)}
+                    >
+                        {page}
+                    </button>
+                ))}
+                {totalPages > 5 && <span className="page-ellipsis">…</span>}
+                {totalPages > 5 && (
+                    <button className="page-btn" onClick={() => setCurrentPage(totalPages)}>
+                        {totalPages}
+                    </button>
+                )}
                 <button className="page-btn" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>›</button>
                 <button className="page-btn" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>»</button>
             </div>
         );
     };
 
-    // ─── RENDER ───────────────────────────────────────────────────────────────
-
     return (
         <div className="admin-layout">
             <AdminNavbar />
-
             <main className="admin-content">
                 <header className="header">
                     <div className="header-left">
                         <h1>Master Inventory</h1>
-                        <p>Centralized repository of all research submissions</p>
+                        <p>Centralized repository of evaluated research submissions</p>
                     </div>
 
                     <div className="inventory-controls">
@@ -309,7 +309,7 @@ export default function AdminMasterInventory() {
                             <Search size={18} className="search-icon" />
                             <input
                                 type="text"
-                                placeholder="Search by title, author, or HR..."
+                                placeholder="Search by title, author, evaluator, or HRU..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -319,9 +319,9 @@ export default function AdminMasterInventory() {
                             <Filter size={18} />
                             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                                 <option value="all">All Status</option>
-                                <option value="pending">Pending</option>
                                 <option value="approved">Approved</option>
                                 <option value="rejected">Rejected</option>
+                                <option value="revision">Revision Required</option>
                             </select>
                         </div>
                     </div>
@@ -334,32 +334,75 @@ export default function AdminMasterInventory() {
                                 <th>HRU NO.</th>
                                 <th>RESEARCH TITLE</th>
                                 <th>AUTHOR</th>
+                                <th>EVALUATORS</th>
                                 <th>STATUS</th>
-                                <th>SUBMITTED</th>
+                                <th>EVALUATION DATE</th>
                                 <th>ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan="6" style={{ textAlign: 'center' }}>Loading database...</td></tr>
+                                <tr>
+                                    <td colSpan="7" style={{ textAlign: 'center', padding: '60px' }}>
+                                        Loading evaluated research...
+                                    </td>
+                                </tr>
                             ) : paginatedResearches.length === 0 ? (
-                                <tr><td colSpan="6" style={{ textAlign: 'center' }}>No results found.</td></tr>
+                                <tr>
+                                    <td colSpan="7" style={{ textAlign: 'center', padding: '60px' }}>
+                                        <div>
+                                            <p>No evaluated research found.</p>
+                                            <p style={{ fontSize: '0.875rem', color: '#666' }}>
+                                                Research appears in Master Inventory only after evaluation is complete.
+                                            </p>
+                                        </div>
+                                    </td>
+                                </tr>
                             ) : (
-                                paginatedResearches.map((item) => (
-                                    <tr key={item.research_id}>
-                                        <td className="hru-cell">{item.hru_no}</td>
-                                        <td className="title-cell">{item.title}</td>
-                                        <td>{item.author_name || <span style={{ color: '#bbb', fontWeight: '400' }}>No Author Listed</span>}</td>
+                                paginatedResearches.map((research) => (
+                                    <tr key={research.research_id}>
+                                        <td className="hru-cell">{research.hru_no}</td>
+                                        <td className="title-cell">{research.title}</td>
+                                        <td>{research.researcher_name}</td>
                                         <td>
-                                            <span className={`role-badge ${getStatusClass(item.status)}`}>
-                                                {item.status?.replace(/_/g, ' ')}
+                                            {research.evaluators && research.evaluators.length > 0 ? (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                                    {research.evaluators.map((evaluator, idx) => (
+                                                        <span
+                                                            key={idx}
+                                                            style={{
+                                                                background: '#e2e8f0',
+                                                                padding: '4px 10px',
+                                                                borderRadius: '20px',
+                                                                fontSize: '12px',
+                                                                fontWeight: 500,
+                                                                color: '#1e293b'
+                                                            }}
+                                                            title={evaluator.email}
+                                                        >
+                                                            {evaluator.name}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <span style={{ color: '#999', fontSize: '12px' }}>No evaluators</span>
+                                            )}
+                                        </td>
+                                        <td>
+                                            <span className={`role-badge ${getStatusClass(research.current_status)}`}>
+                                                {research.current_status?.toUpperCase()}
                                             </span>
                                         </td>
-                                        <td>{new Date(item.registration_date).toLocaleDateString()}</td>
+                                        <td>
+                                            {research.evaluators?.[0]?.evaluation_date
+                                                ? new Date(research.evaluators[0].evaluation_date).toLocaleDateString()
+                                                : 'N/A'}
+                                        </td>
                                         <td>
                                             <div className="action-btns">
-                                                <button className="icon-btn" title="View" onClick={() => handleViewClick(item)}><Eye size={18} /></button>
-                                                <button className="icon-btn assign-btn" title="Assign Evaluator" onClick={() => handleAssignClick(item)}><UserPlus size={18} /></button>
+                                                <button className="icon-btn" title="View Details" onClick={() => handleViewClick(research)}>
+                                                    <Eye size={18} />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -371,12 +414,13 @@ export default function AdminMasterInventory() {
 
                 <div className="pagination-wrapper">
                     <span className="pagination-info">
-                        Showing {filteredResearches.length === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredResearches.length)} of {filteredResearches.length} results
+                        Showing {filteredResearches.length === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1}–
+                        {Math.min(currentPage * ITEMS_PER_PAGE, filteredResearches.length)} of {filteredResearches.length} results
                     </span>
                     {renderPagination()}
                 </div>
 
-                {/* ─── VIEW MODAL ─────────────────────────────────────────────── */}
+                {/* View Modal */}
                 {isModalOpen && selectedStudy && (
                     <div className="modal-overlay" onClick={closeModal}>
                         <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
@@ -385,11 +429,12 @@ export default function AdminMasterInventory() {
                                     <span className="hru-tag">{selectedStudy.hru_no}</span>
                                     <h2>{selectedStudy.title}</h2>
                                 </div>
-                                <button className="close-btn" onClick={closeModal}><X size={24} /></button>
+                                <button className="close-btn" onClick={closeModal}>
+                                    <X size={24} />
+                                </button>
                             </div>
 
                             <div className="modal-body">
-
                                 {/* Research Information */}
                                 <div className="detail-section">
                                     <h3>Research Information</h3>
@@ -400,13 +445,13 @@ export default function AdminMasterInventory() {
                                         </div>
                                         <div className="detail-item">
                                             <label>Registration Date</label>
-                                            <p>{selectedStudy.registration_date}</p>
+                                            <p>{new Date(selectedStudy.registration_date).toLocaleDateString()}</p>
                                         </div>
                                         <div className="detail-item">
                                             <label>Status</label>
                                             <p>
-                                                <span className={`role-badge ${getStatusClass(selectedStudy.status)}`}>
-                                                    {selectedStudy.status?.replace(/_/g, ' ')}
+                                                <span className={`role-badge ${getStatusClass(selectedStudy.current_status)}`}>
+                                                    {selectedStudy.current_status?.toUpperCase()}
                                                 </span>
                                             </p>
                                         </div>
@@ -418,29 +463,32 @@ export default function AdminMasterInventory() {
                                             <label>HRA Alignment</label>
                                             <p>{studyDetails.hraa ? studyDetails.hraa.hraa_category : 'N/A'}</p>
                                         </div>
+                                        <div className="detail-item">
+                                            <label>Primary Author</label>
+                                            <p>{selectedStudy.researcher_name}</p>
+                                        </div>
+                                        <div className="detail-item">
+                                            <label>Author Email</label>
+                                            <p>{selectedStudy.researcher_email || 'N/A'}</p>
+                                        </div>
                                     </div>
                                     {selectedStudy.description && (
                                         <div className="detail-item full-width" style={{ marginTop: '16px' }}>
-                                            <label>Description</label>
+                                            <label>Abstract / Description</label>
                                             <p style={{ fontWeight: 400, lineHeight: 1.6 }}>{selectedStudy.description}</p>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Credentials */}
+                                {/* Co-authors */}
                                 <div className="detail-section">
-                                    <h3>Credentials</h3>
+                                    <h3>Co-authors</h3>
                                     <div className="detail-grid">
-                                        <div className="detail-item">
-                                            <label>Primary Author</label>
-                                            <p>{selectedStudy.author_name || 'N/A'}</p>
-                                        </div>
-                                        <div className="detail-item">
-                                            <label>Co-Authors</label>
+                                        <div className="detail-item full-width">
                                             <p>
                                                 {studyDetails.coauthors.length > 0
                                                     ? studyDetails.coauthors.map(c => c.author_name).join(', ')
-                                                    : 'None'}
+                                                    : 'No co-authors listed'}
                                             </p>
                                         </div>
                                     </div>
@@ -465,31 +513,69 @@ export default function AdminMasterInventory() {
                                             </div>
                                             <div className="detail-item">
                                                 <label>Data Source</label>
-                                                <p>{studyDetails.bio._data_source || 'N/A'}</p>
+                                                <p>{studyDetails.bio.data_source || 'N/A'}</p>
                                             </div>
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Assigned Evaluators */}
+                                {/* Evaluations */}
                                 <div className="detail-section">
-                                    <h3>Assigned Evaluators</h3>
-                                    {studyDetails.evaluators.length === 0 ? (
-                                        <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No evaluators assigned yet.</p>
+                                    <h3>Evaluations</h3>
+                                    {studyDetails.evaluations.length === 0 ? (
+                                        <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No evaluations recorded.</p>
                                     ) : (
-                                        <div className="evaluator-list" style={{ maxHeight: 'unset' }}>
-                                            {studyDetails.evaluators.map((ev, i) => (
-                                                <div key={i} className="evaluator-item" style={{ cursor: 'default', pointerEvents: 'none' }}>
-                                                    <div className="evaluator-info">
-                                                        <span className="evaluator-name">{ev.evaluator_name}</span>
-                                                        <span className="evaluator-email">{ev.evaluator_email}</span>
+                                        <div className="evaluations-list">
+                                            {studyDetails.evaluations.map((evaluation, idx) => (
+                                                <div key={idx} className="evaluation-card" style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+                                                    <div className="evaluation-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                                        <div className="evaluator-info-modal" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <Users size={16} />
+                                                            <strong>{evaluation.name}</strong>
+                                                            <span style={{ fontSize: '12px', color: '#64748b' }}>{evaluation.email}</span>
+                                                        </div>
+                                                        <span className={`role-badge ${getStatusClass(evaluation.recommendation)}`}>
+                                                            {evaluation.recommendation?.toUpperCase()}
+                                                        </span>
                                                     </div>
-                                                    <span
-                                                        className={`role-badge ${getStatusClass(ev.overall_recommendation)}`}
-                                                        style={{ marginLeft: 'auto' }}
-                                                    >
-                                                        {ev.overall_recommendation}
-                                                    </span>
+                                                    <div className="evaluation-date" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
+                                                        <Calendar size={14} />
+                                                        {new Date(evaluation.evaluation_date).toLocaleString()}
+                                                    </div>
+                                                    {evaluation.methodology && (
+                                                        <div className="evaluation-methodology" style={{ marginBottom: '8px' }}>
+                                                            <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>Methodology Assessment:</label>
+                                                            <p style={{ fontSize: '13px', margin: '4px 0 0', color: '#334155' }}>{evaluation.methodology}</p>
+                                                        </div>
+                                                    )}
+                                                    {evaluation.strengths && (
+                                                        <div className="evaluation-strengths" style={{ marginBottom: '8px' }}>
+                                                            <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>Strengths:</label>
+                                                            <p style={{ fontSize: '13px', margin: '4px 0 0', color: '#334155' }}>{evaluation.strengths}</p>
+                                                        </div>
+                                                    )}
+                                                    {evaluation.weaknesses && (
+                                                        <div className="evaluation-weaknesses" style={{ marginBottom: '8px' }}>
+                                                            <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>Weaknesses:</label>
+                                                            <p style={{ fontSize: '13px', margin: '4px 0 0', color: '#334155' }}>{evaluation.weaknesses}</p>
+                                                        </div>
+                                                    )}
+                                                    {evaluation.comments && (
+                                                        <div className="evaluation-notes" style={{ marginBottom: '8px' }}>
+                                                            <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>Additional Comments:</label>
+                                                            <p style={{ fontSize: '13px', margin: '4px 0 0', color: '#334155' }}>{evaluation.comments}</p>
+                                                        </div>
+                                                    )}
+                                                    {evaluation.scores && (
+                                                        <div className="evaluation-scores" style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
+                                                            <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>Scores:</label>
+                                                            <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '12px' }}>
+                                                                <span>Scientific Rigor: {evaluation.scores.sci_rigor}/100</span>
+                                                                <span>HRU Relevance: {evaluation.scores.relevant_to_hru_obj}/100</span>
+                                                                <span>Ethical Compliance: {evaluation.scores.ethical_compliance}/100</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
@@ -502,91 +588,28 @@ export default function AdminMasterInventory() {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                         {studyDetails.files.length === 0 ? (
                                             <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No files attached.</p>
-                                        ) : studyDetails.files.map((file, i) => (
-                                            <a key={i} href={file.file_url} target="_blank" rel="noopener noreferrer" className="file-card">
-                                                <FileText size={20} style={{ marginRight: '10px', color: '#022050' }} />
-                                                <div style={{ flex: 1, overflow: 'hidden' }}>
-                                                    <span style={{ fontSize: '0.9rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
-                                                        {getCleanFileName(file.file_url)}
-                                                    </span>
-                                                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{file.file_type}</span>
-                                                </div>
-                                                <Download size={16} style={{ color: '#94a3b8', marginLeft: 'auto' }} />
-                                            </a>
-                                        ))}
+                                        ) : (
+                                            studyDetails.files.map((file, i) => (
+                                                <a key={i} href={file.file_url} target="_blank" rel="noopener noreferrer" className="file-card">
+                                                    <FileText size={20} style={{ marginRight: '10px', color: '#022050' }} />
+                                                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                                                        <span style={{ fontSize: '0.9rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                                                            {getCleanFileName(file.file_url)}
+                                                        </span>
+                                                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                                            {file.file_type} • {file.uploaded_at ? new Date(file.uploaded_at).toLocaleDateString() : 'No date'}
+                                                        </span>
+                                                    </div>
+                                                    <Download size={16} style={{ color: '#94a3b8', marginLeft: 'auto' }} />
+                                                </a>
+                                            ))
+                                        )}
                                     </div>
                                 </div>
-
                             </div>
                         </div>
                     </div>
                 )}
-
-                {/* ─── ASSIGN MODAL ────────────────────────────────────────────── */}
-                {isAssignModalOpen && assignTarget && (
-                    <div className="modal-overlay" onClick={closeAssignModal}>
-                        <div className="modal-content assign-modal" onClick={(e) => e.stopPropagation()}>
-                            <div className="modal-header">
-                                <div className="modal-header-info">
-                                    <span className="hru-tag">{assignTarget.hru_no}</span>
-                                    <h2>Assign Evaluators</h2>
-                                    <p className="assign-subtitle">{assignTarget.title}</p>
-                                </div>
-                                <button className="close-btn" onClick={closeAssignModal}><X size={24} /></button>
-                            </div>
-
-                            <div className="modal-body">
-                                {assignLoading ? (
-                                    <p style={{ textAlign: 'center', padding: '24px' }}>Loading evaluators...</p>
-                                ) : evaluators.length === 0 ? (
-                                    <p style={{ textAlign: 'center', padding: '24px', color: '#888' }}>No evaluators found.</p>
-                                ) : (
-                                    <>
-                                        <p className="assign-hint">Select or remove evaluators to adjust assignments for this research.</p>
-
-                                        <div className="evaluator-list">
-                                            {evaluators.map((ev) => {
-                                                const eId = Number(ev.evaluator_id);
-                                                const isChecked = selectedEvaluatorIds.includes(eId);
-                                                const wasAlready = alreadyAssigned.some(a => Number(a.evaluator_id) === eId);
-
-                                                return (
-                                                    <div
-                                                        key={ev.evaluator_id}
-                                                        className={`evaluator-item ${isChecked ? 'selected' : ''} ${wasAlready ? 'already-in' : ''}`}
-                                                        onClick={() => toggleEvaluator(eId)}
-                                                    >
-                                                        <div className={`evaluator-checkbox ${isChecked ? 'checked' : ''}`}>
-                                                            {isChecked && <Check size={14} />}
-                                                        </div>
-                                                        <div className="evaluator-info">
-                                                            <span className={`evaluator-name ${wasAlready ? 'strike-out' : ''}`}>
-                                                                {ev.first_name} {ev.last_name}
-                                                                {wasAlready && <span className="assigned-tag">Currently Assigned</span>}
-                                                            </span>
-                                                            <span className={`evaluator-email ${wasAlready ? 'strike-out' : ''}`}>{ev.email}</span>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-
-                                        <div className="assign-actions">
-                                            <span className="selected-count">{selectedEvaluatorIds.length} evaluator{selectedEvaluatorIds.length !== 1 ? 's' : ''} selected</span>
-                                            <div className="assign-btns">
-                                                <button className="cancel-assign-btn" onClick={closeAssignModal}>Cancel</button>
-                                                <button className="save-assign-btn" onClick={handleSaveAssignments} disabled={assignSaving}>
-                                                    {assignSaving ? 'Saving...' : 'Save Assignments'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
             </main>
         </div>
     );

@@ -57,6 +57,12 @@ export default function AdminNavbar() {
                             </NavLink>
                         </li>
                         <li>
+                            <NavLink to="/admin/queue" className={({ isActive }) => isActive ? 'sidebar-link active' : 'sidebar-link'}>
+                                <FileText size={22} className='sidebar-icon' />
+                                <span className='sidebar-text'>Evaluation Queue</span>
+                            </NavLink>
+                        </li>
+                        <li>
                             <NavLink to="/admin/users" className={({ isActive }) => isActive ? 'sidebar-link active' : 'sidebar-link'}>
                                 <Users size={22} className='sidebar-icon' />
                                 <span className='sidebar-text'>User Management</span>

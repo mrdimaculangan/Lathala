@@ -13,7 +13,7 @@ import ResearcherActivityLog from "./components/Researcher/ResearcherActivityLog
 import UserProfile from "./components/Researcher/UserProfile.jsx";
 import EvaluatorUserProfile from "./components/Evaluator/UserProfile.jsx";
 import AdminMasterInventory from "./components/Admin/AdminMasterInventory.jsx";
-
+import AdminEvaluationQueue from "./components/Admin/AdminQueue.jsx";
 
 export const router = createBrowserRouter([
     { path: "/", element: <Login /> },
@@ -112,6 +112,14 @@ export const router = createBrowserRouter([
         element: (
             <ProtectedRoute allowedRoles={['Admin']}>
                 <AdminMasterInventory />
+            </ProtectedRoute>
+        )
+    },
+    {
+        path: "/admin/queue",
+        element: (
+            <ProtectedRoute allowedRoles={['Admin']}>
+                <AdminEvaluationQueue />
             </ProtectedRoute>
         )
     },

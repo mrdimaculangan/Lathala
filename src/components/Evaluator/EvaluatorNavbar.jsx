@@ -93,6 +93,12 @@ export default function EvaluatorNavbar() {
                     <div className='sidebar-divider'></div>
                     <ul className='sidebar-list'>
                         <li>
+                            <NavLink to="/evaluator-profile" className='sidebar-link'>
+                                <User size={22} className='sidebar-icon' />
+                                <span className='sidebar-text'>Profile</span>
+                            </NavLink>
+                        </li>
+                        <li>
                             <NavLink to="/settings" className='sidebar-link'>
                                 <Settings size={22} className='sidebar-icon' />
                                 <span className='sidebar-text'>Settings</span>

@@ -9,6 +9,8 @@ import ResearcherAddStudy from "./components/Researcher/ResearcherAddStudy.jsx";
 import ErrorPage from "./components/ErrorPage.jsx";
 import EvaluateResearch from "./components/Evaluator/EvaluateResearch.jsx";
 import ResearcherActivityLog from "./components/Researcher/ResearcherActivityLog.jsx";
+import UserProfile from "./components/Researcher/UserProfile.jsx";
+import EvaluatorUserProfile from "./components/Evaluator/UserProfile.jsx";
 
 
 export const router = createBrowserRouter([
@@ -40,10 +42,26 @@ export const router = createBrowserRouter([
         )
     },
     {
+        path: "/user-profile",
+        element: (
+            <ProtectedRoute allowedRoles={['Researcher']}>
+                <UserProfile />
+            </ProtectedRoute>
+        )
+    },
+    {
         path: "/evaluator-dashboard",
         element: (
             <ProtectedRoute allowedRoles={['Evaluator']}>
                 <EvaluatorDashboard />
+            </ProtectedRoute>
+        )
+    },
+    {
+        path: "/evaluator-profile",
+        element: (
+            <ProtectedRoute allowedRoles={['Evaluator']}>
+                <EvaluatorUserProfile />
             </ProtectedRoute>
         )
     },

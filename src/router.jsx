@@ -8,6 +8,7 @@ import AdminUserManagement from "./components/Admin/AdminUserManagement.jsx";
 import ResearcherAddStudy from "./components/Researcher/ResearcherAddStudy.jsx";
 import ErrorPage from "./components/ErrorPage.jsx";
 import EvaluateResearch from "./components/Evaluator/EvaluateResearch.jsx";
+import EvaluatorActivityLog from "./components/Evaluator/EvaluatorActivityLog.jsx";
 import ResearcherActivityLog from "./components/Researcher/ResearcherActivityLog.jsx";
 import UserProfile from "./components/Researcher/UserProfile.jsx";
 import EvaluatorUserProfile from "./components/Evaluator/UserProfile.jsx";
@@ -70,6 +71,22 @@ export const router = createBrowserRouter([
         element: (
             <ProtectedRoute allowedRoles={['Evaluator']}>
                 <EvaluateResearch />
+            </ProtectedRoute>
+        )
+    },
+    {
+        path: "/evaluator-activity-log",
+        element: (
+            <ProtectedRoute allowedRoles={['Evaluator']}>
+                <EvaluatorActivityLog />
+            </ProtectedRoute>
+        )
+    },
+    {
+        path: "/evaluator-activity-log/:logId",  // ← ADD THIS ROUTE
+        element: (
+            <ProtectedRoute allowedRoles={['Evaluator']}>
+                <EvaluatorActivityLog />
             </ProtectedRoute>
         )
     },

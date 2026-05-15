@@ -280,11 +280,6 @@ function EvaluateResearch() {
         event.preventDefault();
         
         if (submitting) return;
-        
-        if (!evaluatorId) {
-            alert('Evaluator information not found. Please check the debug panel.');
-            return;
-        }
 
         if (
             !evaluation.scientificRigor ||
@@ -308,6 +303,7 @@ function EvaluateResearch() {
             };
             const newStatus = statusMap[evaluation.recommendation];
 
+            // ✅ Add evaluated_at with current timestamp
             const { error: evalError } = await supabase
                 .from('Evaluation_Research')
                 .insert([{
@@ -320,11 +316,13 @@ function EvaluateResearch() {
                     strengths:              evaluation.strengths,
                     weaknesses:             evaluation.weaknesses,
                     overall_recommendation: evaluation.recommendation,
-                    additional_comments:    evaluation.overallComments
+                    additional_comments:    evaluation.overallComments,
+                    evaluated_at:           new Date().toISOString()  // ← Add this line
                 }]);
 
             if (evalError) throw evalError;
 
+            // Rest of your code remains the same...
             const { error: statusError } = await supabase
                 .from('Research')
                 .update({ status: newStatus })
@@ -393,41 +391,12 @@ function EvaluateResearch() {
             setSubmitting(false);
         }
     };
-
-    // Debug Panel Component
-    const DebugPanel = () => (
-        <div style={{ 
-            position: 'fixed', 
-            bottom: 10, 
-            right: 10, 
-            background: '#1a1a1a', 
-            color: '#0f0', 
-            padding: 10, 
-            zIndex: 9999, 
-            fontSize: 11, 
-            fontFamily: 'monospace',
-            maxWidth: 400,
-            maxHeight: 300,
-            overflow: 'auto',
-            borderRadius: 5,
-            border: '1px solid #0f0'
-        }}>
-            <strong style={{ color: '#fff' }}>🔍 DEBUG PANEL</strong>
-            <pre style={{ margin: '5px 0', fontSize: 10 }}>{JSON.stringify(debugInfo, null, 2)}</pre>
-            <hr style={{ borderColor: '#333' }} />
-            <div>Evaluator ID: <strong style={{ color: '#0f0' }}>{evaluatorId || '❌ null'}</strong></div>
-            <div>Evaluator Name: {evaluatorInfo.name || '❌ null'}</div>
-            <div>Evaluator Email: {evaluatorInfo.email || '❌ null'}</div>
-            <div>AuthContext User: {authUser ? JSON.stringify(authUser).substring(0, 100) : 'null'}</div>
-        </div>
-    );
-
+    
     if (loading) return <div className="evaluate-loading">Loading research details...</div>;
     if (!research) return <div className="evaluate-loading">Research not found</div>;
 
     return (
         <div className="evaluate-page">
-            <DebugPanel /> {/* Debug panel shows what's happening */}
             <Navbar />
 
             <main className="evaluate-container">

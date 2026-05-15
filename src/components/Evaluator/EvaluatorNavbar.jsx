@@ -41,7 +41,6 @@ export default function EvaluatorNavbar() {
             await markAsRead(notif.notification_id);
         }
         setShowNotificationPopup(false);
-        // Navigate to appropriate evaluator activity log or evaluation page
         navigate(`/evaluator-activity-log/${notif.log_id}`);
     };
 
@@ -107,7 +106,7 @@ export default function EvaluatorNavbar() {
                             </NavLink>
                         </li>
                         <li>
-                            <NavLink to="/activity-log" className='sidebar-link'>
+                            <NavLink to="/evaluator-activity-log" className='sidebar-link'>
                                 <History size={22} className='sidebar-icon' />
                                 <span className='sidebar-text'>Activity Log</span>
                             </NavLink>

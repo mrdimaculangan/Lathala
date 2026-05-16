@@ -24,7 +24,6 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 30px;
     width: 100%;
     flex-wrap: wrap;
     gap: 16px;
@@ -359,9 +358,7 @@
 
 .evaluator-name {
     font-size: 16px;
-    /* Increased from 14px */
     font-weight: 600;
-    /* Increased from 500 */
     color: #111;
     display: flex;
     align-items: center;

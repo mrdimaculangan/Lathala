@@ -30,7 +30,8 @@ export default function AdminMasterInventory() {
             result = result.filter(r => {
                 if (filterStatus === 'approved') return r.current_status === 'approved';
                 if (filterStatus === 'rejected') return r.current_status === 'rejected';
-                if (filterStatus === 'revision') return r.current_status === 'revision';
+                if (filterStatus === 'minor_revision') return r.current_status === 'minor_revision';
+                if (filterStatus === 'major_revision') return r.current_status === 'major_revision';
                 return true;
             });
         }
@@ -257,8 +258,18 @@ export default function AdminMasterInventory() {
         const s = status?.toLowerCase();
         if (s === 'approved') return 'status-approved';
         if (s === 'rejected') return 'status-rejected';
-        if (s === 'revision') return 'status-revision';
+        if (s === 'minor_revision') return 'status-minor-revision';
+        if (s === 'major_revision') return 'status-major-revision';
         return 'status-pending';
+    };
+
+    const getStatusDisplayText = (status) => {
+        const s = status?.toLowerCase();
+        if (s === 'approved') return 'APPROVED';
+        if (s === 'rejected') return 'REJECTED';
+        if (s === 'minor_revision') return 'MINOR REVISION';
+        if (s === 'major_revision') return 'MAJOR REVISION';
+        return 'PENDING';
     };
 
     const renderPagination = () => {
@@ -320,8 +331,9 @@ export default function AdminMasterInventory() {
                             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                                 <option value="all">All Status</option>
                                 <option value="approved">Approved</option>
+                                <option value="minor_revision">Minor Revision</option>
+                                <option value="major_revision">Major Revision</option>
                                 <option value="rejected">Rejected</option>
-                                <option value="revision">Revision Required</option>
                             </select>
                         </div>
                     </div>
@@ -390,7 +402,7 @@ export default function AdminMasterInventory() {
                                         </td>
                                         <td>
                                             <span className={`role-badge ${getStatusClass(research.current_status)}`}>
-                                                {research.current_status?.toUpperCase()}
+                                                {getStatusDisplayText(research.current_status)}
                                             </span>
                                         </td>
                                         <td>
@@ -451,7 +463,7 @@ export default function AdminMasterInventory() {
                                             <label>Status</label>
                                             <p>
                                                 <span className={`role-badge ${getStatusClass(selectedStudy.current_status)}`}>
-                                                    {selectedStudy.current_status?.toUpperCase()}
+                                                    {getStatusDisplayText(selectedStudy.current_status)}
                                                 </span>
                                             </p>
                                         </div>
@@ -535,7 +547,7 @@ export default function AdminMasterInventory() {
                                                             <span style={{ fontSize: '12px', color: '#64748b' }}>{evaluation.email}</span>
                                                         </div>
                                                         <span className={`role-badge ${getStatusClass(evaluation.recommendation)}`}>
-                                                            {evaluation.recommendation?.toUpperCase()}
+                                                            {getStatusDisplayText(evaluation.recommendation)}
                                                         </span>
                                                     </div>
                                                     <div className="evaluation-date" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>

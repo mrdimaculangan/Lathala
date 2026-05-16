@@ -13,8 +13,8 @@ export default function AdminQueue() {
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [assignTarget, setAssignTarget] = useState(null);
     const [evaluators, setEvaluators] = useState([]);
-    const [selectedEvaluatorIds, setSelectedEvaluatorIds] = useState([]);
-    const [alreadyAssigned, setAlreadyAssigned] = useState([]);
+    const [selectedEvaluatorId, setSelectedEvaluatorId] = useState(null);  // single value
+    const [alreadyAssigned, setAlreadyAssigned] = useState(null);           // single object
     const [saving, setSaving] = useState(false);
 
     // Pagination and Filter states
@@ -61,7 +61,6 @@ export default function AdminQueue() {
     async function loadQueueData() {
         setLoading(true);
         try {
-            // Get research IDs that already have evaluations (completed)
             const { data: evaluatedResearch, error: evalError } = await supabase
                 .from('Evaluation_Research')
                 .select('research_id');
@@ -70,7 +69,6 @@ export default function AdminQueue() {
 
             const evaluatedIds = evaluatedResearch?.map(er => er.research_id) || [];
 
-            // Build query for unevaluated research
             let query = supabase
                 .from('Research')
                 .select(`
@@ -93,16 +91,13 @@ export default function AdminQueue() {
                 `)
                 .order('registration_date', { ascending: false });
 
-            // Filter out already evaluated research
             if (evaluatedIds.length > 0) {
                 query = query.not('research_id', 'in', `(${evaluatedIds.join(',')})`);
             }
 
             const { data: researchData, error: researchError } = await query;
-
             if (researchError) throw researchError;
 
-            // Get assigned evaluators for these research items
             if (researchData && researchData.length > 0) {
                 const researchIds = researchData.map(r => r.research_id);
 
@@ -127,31 +122,20 @@ export default function AdminQueue() {
 
                 if (queueError) throw queueError;
 
-                // Process and combine the data
                 const processedResearches = researchData.map(research => {
                     const assignedEvaluators = (queueData || [])
                         .filter(q => q.research_id === research.research_id)
-                        .map(q => {
-                            const firstName = q.Evaluator?.Users?.first_name || '';
-                            const lastName = q.Evaluator?.Users?.last_name || '';
-                            const fullName = `${firstName} ${lastName}`.trim();
-
-                            return {
-                                id: q.evaluator_id,
-                                name: fullName || 'Unknown',
-                                email: q.Evaluator?.Users?.email || 'No email',
-                                assigned_at: q.assigned_at,
-                                status: q.status
-                            };
-                        });
-
-                    const researcherFirstName = research.Researcher?.Users?.first_name || '';
-                    const researcherLastName = research.Researcher?.Users?.last_name || '';
-                    const researcherFullName = `${researcherFirstName} ${researcherLastName}`.trim();
+                        .map(q => ({
+                            id: q.evaluator_id,
+                            name: `${q.Evaluator?.Users?.first_name || ''} ${q.Evaluator?.Users?.last_name || ''}`.trim() || 'Unknown',
+                            email: q.Evaluator?.Users?.email || 'No email',
+                            assigned_at: q.assigned_at,
+                            status: q.status
+                        }));
 
                     return {
                         ...research,
-                        researcher_name: researcherFullName || 'Unknown',
+                        researcher_name: `${research.Researcher?.Users?.first_name || ''} ${research.Researcher?.Users?.last_name || ''}`.trim() || 'Unknown',
                         researcher_email: research.Researcher?.Users?.email,
                         assigned_evaluators: assignedEvaluators
                     };
@@ -196,21 +180,17 @@ export default function AdminQueue() {
 
             if (assignedError) throw assignedError;
 
-            const formattedEvaluators = (evaluatorsData || []).map(ev => {
-                const firstName = ev.Users?.first_name || '';
-                const lastName = ev.Users?.last_name || '';
-                const fullName = `${firstName} ${lastName}`.trim();
-
-                return {
-                    evaluator_id: ev.evaluator_id,
-                    name: fullName || 'Unknown',
-                    email: ev.Users?.email || 'No email'
-                };
-            });
+            const formattedEvaluators = (evaluatorsData || []).map(ev => ({
+                evaluator_id: ev.evaluator_id,
+                name: `${ev.Users?.first_name || ''} ${ev.Users?.last_name || ''}`.trim() || 'Unknown',
+                email: ev.Users?.email || 'No email'
+            }));
 
             setEvaluators(formattedEvaluators);
-            setAlreadyAssigned(assignedData || []);
-            setSelectedEvaluatorIds((assignedData || []).map(a => a.evaluator_id));
+            // Single evaluator — take the first assigned one if it exists
+            const current = assignedData && assignedData.length > 0 ? assignedData[0] : null;
+            setAlreadyAssigned(current);
+            setSelectedEvaluatorId(current ? current.evaluator_id : null);
         } catch (err) {
             console.error('Error loading evaluators:', err);
             alert('Failed to load evaluators. Please try again.');
@@ -219,44 +199,39 @@ export default function AdminQueue() {
 
     const handleSaveAssignments = async () => {
         setSaving(true);
-        const currentSelection = selectedEvaluatorIds.map(id => Number(id));
-        const alreadyIds = alreadyAssigned.map(a => Number(a.evaluator_id));
-
-        const toAdd = currentSelection.filter(id => !alreadyIds.includes(id));
-        const toRemove = alreadyIds.filter(id => !currentSelection.includes(id));
+        const currentSelection = selectedEvaluatorId ? Number(selectedEvaluatorId) : null;
+        const alreadyId = alreadyAssigned ? Number(alreadyAssigned.evaluator_id) : null;
 
         try {
-            // Handle adding new evaluators
-            if (toAdd.length > 0) {
-                const newRows = toAdd.map(id => ({
-                    research_id: assignTarget.research_id,
-                    evaluator_id: id,
-                    assigned_at: new Date().toISOString(),
-                    status: 'Pending'
-                }));
-
-                const { error: insertError } = await supabase
-                    .from('Research_Queue')
-                    .insert(newRows);
-
-                if (insertError) throw insertError;
-
-                // Create notifications for newly assigned evaluators
-                await createAssignmentNotifications(toAdd);
-            }
-
-            // Handle removing evaluators
-            if (toRemove.length > 0) {
+            // Remove old evaluator if changed
+            if (alreadyId !== null && alreadyId !== currentSelection) {
                 const { error: deleteError } = await supabase
                     .from('Research_Queue')
                     .delete()
                     .eq('research_id', assignTarget.research_id)
-                    .in('evaluator_id', toRemove);
+                    .eq('evaluator_id', alreadyId);
 
                 if (deleteError) throw deleteError;
             }
 
-            alert(`Successfully updated evaluators for ${assignTarget.hru_no}`);
+            // Insert new evaluator if changed
+            if (currentSelection !== null && currentSelection !== alreadyId) {
+                const { error: insertError } = await supabase
+                    .from('Research_Queue')
+                    .insert({
+                        research_id: assignTarget.research_id,
+                        evaluator_id: currentSelection,
+                        assigned_at: new Date().toISOString(),
+                        status: 'Pending'
+                    });
+
+                if (insertError) throw insertError;
+
+                // Send notification to newly assigned evaluator
+                await createAssignmentNotification(currentSelection);
+            }
+
+            alert(`Successfully updated evaluator for ${assignTarget.hru_no}`);
             setIsAssignModalOpen(false);
             await loadQueueData();
         } catch (error) {
@@ -267,28 +242,24 @@ export default function AdminQueue() {
         }
     };
 
-    const createAssignmentNotifications = async (newEvaluatorIds) => {
+    const createAssignmentNotification = async (newEvaluatorId) => {
         try {
-            // Step 1: Get evaluator user_ids from Evaluator table
+            // Get the evaluator's user_id
             const { data: evaluatorData, error: evaluatorError } = await supabase
                 .from('Evaluator')
                 .select('evaluator_id, user_id')
-                .in('evaluator_id', newEvaluatorIds);
+                .eq('evaluator_id', newEvaluatorId)
+                .single();
 
-            if (evaluatorError) {
-                console.error('Error fetching evaluator user_ids:', evaluatorError);
+            if (evaluatorError || !evaluatorData) {
+                console.error('Error fetching evaluator user_id:', evaluatorError);
                 return;
             }
 
-            if (!evaluatorData || evaluatorData.length === 0) {
-                console.warn('No evaluator user_ids found for notification');
-                return;
-            }
-
-            // Step 2: Get admin info for the activity log and notification message
+            // Get admin info
             const { data: { session } } = await supabase.auth.getSession();
             const adminUserId = session?.user?.id;
-            
+
             let adminName = 'Administrator';
             if (adminUserId) {
                 const { data: adminData } = await supabase
@@ -296,72 +267,58 @@ export default function AdminQueue() {
                     .select('first_name, last_name')
                     .eq('user_id', adminUserId)
                     .single();
-                
+
                 if (adminData) {
                     adminName = `${adminData.first_name || ''} ${adminData.last_name || ''}`.trim() || 'Administrator';
                 }
             }
 
-            // Step 3: Create activity log entry
-            const evaluatorNames = evaluators
-                .filter(ev => newEvaluatorIds.includes(ev.evaluator_id))
-                .map(ev => ev.name)
-                .join(', ');
+            // Get evaluator name for log
+            const evaluator = evaluators.find(ev => ev.evaluator_id === newEvaluatorId);
+            const evaluatorName = evaluator?.name || 'Evaluator';
 
-            const notesText = `Research "${assignTarget.title}" (${assignTarget.hru_no}) assigned to evaluator(s): ${evaluatorNames}`;
-
+            // Create activity log
             const { data: logData, error: logError } = await supabase
                 .from('ResearchActivityLog')
                 .insert([{
                     research_id: assignTarget.research_id,
-                    actor_id: adminUserId, // Admin's auth user ID as the actor
+                    actor_id: adminUserId,
                     actor_role: 'admin',
                     action: 'assigned_evaluators',
-                    notes: notesText,
+                    notes: `Research "${assignTarget.title}" (${assignTarget.hru_no}) assigned to evaluator: ${evaluatorName}`,
                 }])
                 .select()
                 .single();
 
             if (logError) {
                 console.error('Error creating activity log:', logError);
-                // Continue with notifications even if logging fails
             }
 
-            // Step 4: Insert into evaluator_notifications table (CRITICAL - this is the right table)
-            const notifications = evaluatorData.map(ev => ({
-                recipient_id: ev.user_id,           // Evaluator's auth user UUID
-                research_id: assignTarget.research_id,
-                log_id: logData?.log_id || null,
-                message: `You have been assigned to evaluate research "${assignTarget.title}" (${assignTarget.hru_no}). Please review and submit your evaluation.`,
-                is_read: false,
-                is_deleted: false,
-            }));
-
-            // ✅ THIS IS THE KEY PART - inserting into evaluator_notifications table
-            const { data: insertedNotifications, error: notifError } = await supabase
-                .from('evaluator_notifications')  // ← Make sure this matches your table name exactly
-                .insert(notifications)
-                .select();
+            // Insert notification
+            const { error: notifError } = await supabase
+                .from('evaluator_notifications')
+                .insert({
+                    recipient_id: evaluatorData.user_id,
+                    research_id: assignTarget.research_id,
+                    log_id: logData?.log_id || null,
+                    message: `You have been assigned to evaluate research "${assignTarget.title}" (${assignTarget.hru_no}). Please review and submit your evaluation.`,
+                    is_read: false,
+                    is_deleted: false,
+                });
 
             if (notifError) {
-                console.error('Error creating evaluator notifications:', notifError);
-                throw notifError;
+                console.error('Error creating notification:', notifError);
+            } else {
+                console.log('✅ Notification sent to evaluator:', evaluatorName);
             }
-
-            console.log(`✅ Successfully created ${insertedNotifications.length} evaluator notification(s):`, insertedNotifications);
-
         } catch (error) {
-            console.error('Error in createAssignmentNotifications:', error);
-            // Don't throw - we don't want to break the assignment if notifications fail
+            console.error('Error in createAssignmentNotification:', error);
         }
     };
 
-    const toggleEvaluator = (evaluatorId) => {
-        setSelectedEvaluatorIds(prev =>
-            prev.includes(evaluatorId)
-                ? prev.filter(id => id !== evaluatorId)
-                : [...prev, evaluatorId]
-        );
+    const selectEvaluator = (evaluatorId) => {
+        // Radio behavior — clicking the same one deselects, clicking another switches
+        setSelectedEvaluatorId(prev => prev === evaluatorId ? null : evaluatorId);
     };
 
     const renderPagination = () => {
@@ -419,8 +376,8 @@ export default function AdminQueue() {
                         <div className="filter-wrapper">
                             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                                 <option value="all">All Status</option>
-                                <option value="assigned">Has Evaluators</option>
-                                <option value="unassigned">No Evaluators</option>
+                                <option value="assigned">Has Evaluator</option>
+                                <option value="unassigned">No Evaluator</option>
                             </select>
                         </div>
                         <div className="queue-stats">
@@ -439,7 +396,7 @@ export default function AdminQueue() {
                                 <th>HRU NO.</th>
                                 <th>RESEARCH TITLE</th>
                                 <th>AUTHOR</th>
-                                <th>ASSIGNED EVALUATORS</th>
+                                <th>ASSIGNED EVALUATOR</th>
                                 <th>SUBMITTED DATE</th>
                                 <th>ACTIONS</th>
                             </tr>
@@ -477,7 +434,6 @@ export default function AdminQueue() {
                                                         <span
                                                             key={assignedEval.id}
                                                             className="evaluator-chip"
-                                                            data-email={assignedEval.email}
                                                             title={assignedEval.email}
                                                         >
                                                             {assignedEval.name}
@@ -485,7 +441,7 @@ export default function AdminQueue() {
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <span className="no-evaluators">No evaluators assigned</span>
+                                                <span className="no-evaluators">No evaluator assigned</span>
                                             )}
                                         </td>
                                         <td>{new Date(research.registration_date).toLocaleDateString()}</td>
@@ -493,7 +449,7 @@ export default function AdminQueue() {
                                             <button
                                                 className="icon-btn assign-btn"
                                                 onClick={() => handleAssignClick(research)}
-                                                title="Assign Evaluators"
+                                                title="Assign Evaluator"
                                             >
                                                 <UserPlus size={18} />
                                             </button>
@@ -515,15 +471,15 @@ export default function AdminQueue() {
                     </div>
                 )}
 
-                {/* Assign Evaluators Modal */}
+                {/* Assign Evaluator Modal */}
                 {isAssignModalOpen && assignTarget && (
                     <div className="modal-overlay" onClick={() => !saving && setIsAssignModalOpen(false)}>
                         <div className="admin-modal assign-modal" onClick={(e) => e.stopPropagation()}>
                             <div className="modal-header">
                                 <div>
                                     <div className="hru-tag">{assignTarget.hru_no}</div>
-                                    <h2>Assign Evaluators</h2>
-                                    <p className="assign-subtitle">Select evaluators to review this research</p>
+                                    <h2>Assign Evaluator</h2>
+                                    <p className="assign-subtitle">Select an evaluator to review this research</p>
                                 </div>
                                 <button className="icon-btn close-modal-btn" onClick={() => !saving && setIsAssignModalOpen(false)}>
                                     <X size={20} />
@@ -553,25 +509,25 @@ export default function AdminQueue() {
                             </div>
 
                             <div className="detail-section">
-                                <h3>Select Evaluators</h3>
+                                <h3>Select Evaluator</h3>
                                 <div className="evaluator-list">
                                     {evaluators.map((ev) => {
-                                        const isChecked = selectedEvaluatorIds.includes(ev.evaluator_id);
-                                        const isAlreadyAssigned = alreadyAssigned.some(a => a.evaluator_id === ev.evaluator_id);
+                                        const isSelected = selectedEvaluatorId === ev.evaluator_id;
+                                        const isAlreadyAssigned = alreadyAssigned?.evaluator_id === ev.evaluator_id;
 
                                         return (
                                             <div
                                                 key={ev.evaluator_id}
-                                                className={`evaluator-item ${isChecked ? 'selected' : ''} ${isAlreadyAssigned && !isChecked ? 'already-in' : ''}`}
-                                                onClick={() => toggleEvaluator(ev.evaluator_id)}
+                                                className={`evaluator-item ${isSelected ? 'selected' : ''}`}
+                                                onClick={() => selectEvaluator(ev.evaluator_id)}
                                             >
-                                                <div className={`evaluator-checkbox ${isChecked ? 'checked' : ''}`}>
-                                                    {isChecked && <Check size={14} />}
+                                                <div className={`evaluator-radio ${isSelected ? 'checked' : ''}`}>
+                                                    {isSelected && <Check size={14} />}
                                                 </div>
                                                 <div className="evaluator-info">
                                                     <span className="evaluator-name">
                                                         {ev.name}
-                                                        {isAlreadyAssigned && !isChecked && (
+                                                        {isAlreadyAssigned && (
                                                             <span className="assigned-tag">Currently Assigned</span>
                                                         )}
                                                     </span>
@@ -583,7 +539,7 @@ export default function AdminQueue() {
                                 </div>
                                 <div className="assign-actions">
                                     <div className="selected-count">
-                                        {selectedEvaluatorIds.length} evaluator(s) selected
+                                        {selectedEvaluatorId ? '1 evaluator selected' : 'No evaluator selected'}
                                     </div>
                                     <div className="assign-btns">
                                         <button
@@ -596,7 +552,7 @@ export default function AdminQueue() {
                                         <button
                                             className="save-assign-btn"
                                             onClick={handleSaveAssignments}
-                                            disabled={selectedEvaluatorIds.length === 0 || saving}
+                                            disabled={!selectedEvaluatorId || saving}
                                         >
                                             {saving ? 'Saving...' : 'Save to Queue'}
                                         </button>

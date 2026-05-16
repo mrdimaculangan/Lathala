@@ -110,7 +110,7 @@ export default function ResearcherActivityLog() {
             const status = selectedLog.Research?.status?.trim();
             const revisionType = status?.toLowerCase().includes('minor') ? 'minor' : 'major';
 
-            // 1. Upload file to storage
+            // Upload file to storage
             const filePath = `public/${researchId}/revision_${Date.now()}_${revisionFile.name}`;
             const { error: uploadError } = await supabase.storage
                 .from('research-files')
@@ -123,7 +123,7 @@ export default function ResearcherActivityLog() {
 
             const fileUrl = urlObj.publicUrl;
 
-            // 2. Insert into ResearchRevisions
+            // Insert into ResearchRevisions
             const { error: revError } = await supabase
                 .from('ResearchRevisions')
                 .insert([{
@@ -135,36 +135,50 @@ export default function ResearcherActivityLog() {
                 }]);
             if (revError) throw revError;
 
-            // 3. Insert into ResearchActivityLog
+            //  Reset Research status to Pending so evaluator sees it again
+            const { error: statusError } = await supabase
+                .from('Research')
+                .update({ status: 'Pending' })
+                .eq('research_id', researchId);
+            if (statusError) throw statusError;
+
+            // Insert into ResearchActivityLog
             const { data: logData, error: logError } = await supabase
                 .from('ResearchActivityLog')
                 .insert([{
                     research_id: researchId,
-                    actor_id: dbId,
-                    actor_role: 'researcher',
-                    action: 'revision_submitted',
-                    notes: revisionComment.trim() || null,
+                    actor_id:    dbId,
+                    actor_role:  'researcher',
+                    action:      'revision_submitted',
+                    notes:       revisionComment.trim() || null,
                 }])
                 .select()
                 .single();
             if (logError) throw logError;
 
-            // 4. Notify all evaluators
-            const { data: evaluators } = await supabase
-                .from('Users')
-                .select('user_id')
-                .eq('role', 'Evaluator');
+            // Find the assigned evaluator from Research_Queue
+            const { data: queueRow } = await supabase
+                .from('Research_Queue')
+                .select('evaluator_id')
+                .eq('research_id', researchId)
+                .single();
 
-            if (evaluators && evaluators.length > 0) {
-                const title = selectedLog.Research?.title;
-                await supabase.from('evaluator_notifications').insert(
-                    evaluators.map(ev => ({
-                        recipient_id: ev.user_id,
-                        research_id: researchId,
-                        log_id: logData.log_id,
-                        message: `A revision has been submitted for "${title}". Please review.`,
-                    }))
-                );
+            if (queueRow?.evaluator_id) {
+                // Get their auth UUID
+                const { data: evalUser } = await supabase
+                    .from('Evaluator')
+                    .select('user_id')
+                    .eq('evaluator_id', queueRow.evaluator_id)
+                    .single();
+
+                if (evalUser?.user_id) {
+                    await supabase.from('evaluator_notifications').insert([{
+                        recipient_id: evalUser.user_id,
+                        research_id:  researchId,
+                        log_id:       logData.log_id,
+                        message:      `A revision has been submitted for "${selectedLog.Research?.title}". Please review.`,
+                    }]);
+                }
             }
 
             setRevisionSubmitted(true);

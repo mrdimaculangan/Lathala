@@ -326,3 +326,70 @@
 .edit-submission-btn:hover {
     background: #1b2c5e;
 }
+
+/*  REVISIONS AREA */
+.revision-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.revision-history-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.revision-history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.revision-history-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.revision-type-tag {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.revision-history-date {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.revision-history-comment {
+    font-size: 0.85rem;
+    color: #475569;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.revision-history-file {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.revision-history-file:hover {
+    text-decoration: underline;
+}

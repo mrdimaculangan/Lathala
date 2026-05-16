@@ -7,9 +7,9 @@ import Navbar from "./ResearcherNavbar";
 import "./ResearcherActivityLog.css";
 
 const STATUS_STYLES = {
-    'Pending':              { bg: '#fef9c3', text: '#854d0e' },
-    'Approved':             { bg: '#dcfce7', text: '#166534' },
-    'Rejected':             { bg: '#fee2e2', text: '#991b1b' },
+    'Pending': { bg: '#fef9c3', text: '#854d0e' },
+    'Approved': { bg: '#dcfce7', text: '#166534' },
+    'Rejected': { bg: '#fee2e2', text: '#991b1b' },
     'With Minor Revisions': { bg: '#dbeafe', text: '#1e40af' },
     'With Major Revisions': { bg: '#ede9fe', text: '#5b21b6' },
 };
@@ -18,11 +18,11 @@ const getActionConfig = (rawStatus) => {
     const status = rawStatus?.trim() ?? '';
     const s = status.toLowerCase();
 
-    if (s === 'pending')       return { label: 'Waiting for Review',  clickable: false, color: '#854d0e' };
-    if (s === 'approved')      return { label: 'View Details →',      clickable: true,  color: '#166534' };
-    if (s === 'rejected')      return { label: 'View Details →',      clickable: true,  color: '#991b1b' };
-    if (s.includes('minor'))   return { label: 'Submit Response →',   clickable: true,  color: '#1e40af' };
-    if (s.includes('major'))   return { label: 'Submit Revision →',   clickable: true,  color: '#5b21b6' };
+    if (s === 'pending') return { label: 'Waiting for Review', clickable: false, color: '#854d0e' };
+    if (s === 'approved') return { label: 'View Details →', clickable: true, color: '#166534' };
+    if (s === 'rejected') return { label: 'View Details →', clickable: true, color: '#991b1b' };
+    if (s.includes('minor')) return { label: 'Submit Response →', clickable: true, color: '#1e40af' };
+    if (s.includes('major')) return { label: 'Submit Revision →', clickable: true, color: '#5b21b6' };
 
     console.warn("Unmatched status:", JSON.stringify(status));
     return { label: 'Waiting for Review', clickable: false, color: '#94a3b8' };
@@ -44,6 +44,7 @@ export default function ResearcherActivityLog() {
     const [revisionSubmitted, setRevisionSubmitted] = useState(false);
 
     useEffect(() => {
+        console.log('dbId value:', dbId);
         if (!dbId) return;
 
         async function fetchLogs() {
@@ -126,11 +127,11 @@ export default function ResearcherActivityLog() {
             const { error: revError } = await supabase
                 .from('ResearchRevisions')
                 .insert([{
-                    research_id:        researchId,
-                    revision_type:      revisionType,
+                    research_id: researchId,
+                    revision_type: revisionType,
                     researcher_comment: revisionComment.trim() || null,
-                    new_file_url:       fileUrl,
-                    status:             'Pending'
+                    new_file_url: fileUrl,
+                    status: 'Pending'
                 }]);
             if (revError) throw revError;
 
@@ -139,10 +140,10 @@ export default function ResearcherActivityLog() {
                 .from('ResearchActivityLog')
                 .insert([{
                     research_id: researchId,
-                    actor_id:    dbId,
-                    actor_role:  'researcher',
-                    action:      'revision_submitted',
-                    notes:       revisionComment.trim() || null,
+                    actor_id: dbId,
+                    actor_role: 'researcher',
+                    action: 'revision_submitted',
+                    notes: revisionComment.trim() || null,
                 }])
                 .select()
                 .single();
@@ -159,9 +160,9 @@ export default function ResearcherActivityLog() {
                 await supabase.from('evaluator_notifications').insert(
                     evaluators.map(ev => ({
                         recipient_id: ev.user_id,
-                        research_id:  researchId,
-                        log_id:       logData.log_id,
-                        message:      `A revision has been submitted for "${title}". Please review.`,
+                        research_id: researchId,
+                        log_id: logData.log_id,
+                        message: `A revision has been submitted for "${title}". Please review.`,
                     }))
                 );
             }
@@ -350,125 +351,125 @@ export default function ResearcherActivityLog() {
                             {/* Revision submission area */}
                             {(selectedLog.Research?.status?.toLowerCase().includes('minor') ||
                                 selectedLog.Research?.status?.toLowerCase().includes('major')) && (
-                                <div className="detail-section">
-                                    <h3>Revision Submission</h3>
+                                    <div className="detail-section">
+                                        <h3>Revision Submission</h3>
 
-                                    {revisionSubmitted ? (
-                                        <div className="status-message approved">
-                                            <CheckCircle size={20} />
-                                            <p>Your revision has been submitted successfully. The evaluator will be notified.</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.25rem', lineHeight: '1.5' }}>
-                                                {selectedLog.Research?.status?.toLowerCase().includes('minor')
-                                                    ? "Address the evaluator's notes and upload your revised document below."
-                                                    : 'Substantially revise your research and upload the revised document below.'}
-                                            </p>
+                                        {revisionSubmitted ? (
+                                            <div className="status-message approved">
+                                                <CheckCircle size={20} />
+                                                <p>Your revision has been submitted successfully. The evaluator will be notified.</p>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.25rem', lineHeight: '1.5' }}>
+                                                    {selectedLog.Research?.status?.toLowerCase().includes('minor')
+                                                        ? "Address the evaluator's notes and upload your revised document below."
+                                                        : 'Substantially revise your research and upload the revised document below.'}
+                                                </p>
 
-                                            {/* File upload */}
-                                            <div className="revision-upload-area">
-                                                <input
-                                                    type="file"
-                                                    id="revision-file-input"
-                                                    style={{ display: 'none' }}
-                                                    accept=".pdf,.docx,.pptx,.jpg,.png"
-                                                    onChange={(e) => setRevisionFile(e.target.files[0] || null)}
-                                                />
+                                                {/* File upload */}
+                                                <div className="revision-upload-area">
+                                                    <input
+                                                        type="file"
+                                                        id="revision-file-input"
+                                                        style={{ display: 'none' }}
+                                                        accept=".pdf,.docx,.pptx,.jpg,.png"
+                                                        onChange={(e) => setRevisionFile(e.target.files[0] || null)}
+                                                    />
 
-                                                {!revisionFile ? (
-                                                    <button
-                                                        className="revision-upload-btn"
-                                                        onClick={() => document.getElementById('revision-file-input').click()}
-                                                        type="button"
-                                                    >
-                                                        <span className="revision-upload-icon">📎</span>
-                                                        <span>Attach Revised File</span>
-                                                        <small>PDF, DOCX, PPTX, JPG, PNG accepted</small>
-                                                    </button>
-                                                ) : (
-                                                    <div className="revision-file-preview">
-                                                        <div className="revision-file-info">
-                                                            <FileText size={20} color="#031640" />
-                                                            <div>
-                                                                <span className="revision-file-name">{revisionFile.name}</span>
-                                                                <span className="revision-file-size">
-                                                                    {(revisionFile.size / 1024 / 1024).toFixed(2)} MB · Research Paper
-                                                                </span>
-                                                            </div>
-                                                        </div>
+                                                    {!revisionFile ? (
                                                         <button
-                                                            className="revision-file-remove"
-                                                            onClick={() => setRevisionFile(null)}
+                                                            className="revision-upload-btn"
+                                                            onClick={() => document.getElementById('revision-file-input').click()}
                                                             type="button"
                                                         >
-                                                            <X size={16} />
+                                                            <span className="revision-upload-icon">📎</span>
+                                                            <span>Attach Revised File</span>
+                                                            <small>PDF, DOCX, PPTX, JPG, PNG accepted</small>
                                                         </button>
-                                                    </div>
-                                                )}
-                                            </div>
+                                                    ) : (
+                                                        <div className="revision-file-preview">
+                                                            <div className="revision-file-info">
+                                                                <FileText size={20} color="#031640" />
+                                                                <div>
+                                                                    <span className="revision-file-name">{revisionFile.name}</span>
+                                                                    <span className="revision-file-size">
+                                                                        {(revisionFile.size / 1024 / 1024).toFixed(2)} MB · Research Paper
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                className="revision-file-remove"
+                                                                onClick={() => setRevisionFile(null)}
+                                                                type="button"
+                                                            >
+                                                                <X size={16} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
 
-                                            {/* Comment */}
-                                            <div style={{ marginTop: '1rem' }}>
-                                                <label style={{
-                                                    display: 'block',
-                                                    fontSize: '0.8rem',
-                                                    fontWeight: 700,
-                                                    color: '#475569',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '0.05em',
-                                                    marginBottom: '8px'
-                                                }}>
-                                                    Comments for the Evaluator
-                                                    <span style={{ color: '#94a3b8', fontWeight: 400, textTransform: 'none', marginLeft: '6px' }}>
-                                                        (optional)
-                                                    </span>
-                                                </label>
-                                                <textarea
-                                                    rows={4}
-                                                    placeholder="Describe the changes you made and how you addressed the evaluator's feedback..."
-                                                    value={revisionComment}
-                                                    onChange={(e) => setRevisionComment(e.target.value)}
+                                                {/* Comment */}
+                                                <div style={{ marginTop: '1rem' }}>
+                                                    <label style={{
+                                                        display: 'block',
+                                                        fontSize: '0.8rem',
+                                                        fontWeight: 700,
+                                                        color: '#475569',
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: '0.05em',
+                                                        marginBottom: '8px'
+                                                    }}>
+                                                        Comments for the Evaluator
+                                                        <span style={{ color: '#94a3b8', fontWeight: 400, textTransform: 'none', marginLeft: '6px' }}>
+                                                            (optional)
+                                                        </span>
+                                                    </label>
+                                                    <textarea
+                                                        rows={4}
+                                                        placeholder="Describe the changes you made and how you addressed the evaluator's feedback..."
+                                                        value={revisionComment}
+                                                        onChange={(e) => setRevisionComment(e.target.value)}
+                                                        style={{
+                                                            width: '100%',
+                                                            padding: '10px 14px',
+                                                            border: '1px solid #e2e8f0',
+                                                            borderRadius: '8px',
+                                                            fontSize: '0.875rem',
+                                                            color: '#0f172a',
+                                                            resize: 'vertical',
+                                                            outline: 'none',
+                                                            fontFamily: 'Inter, sans-serif',
+                                                            lineHeight: '1.5',
+                                                            boxSizing: 'border-box'
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                {/* Submit */}
+                                                <button
+                                                    className="edit-submission-btn"
                                                     style={{
                                                         width: '100%',
-                                                        padding: '10px 14px',
-                                                        border: '1px solid #e2e8f0',
-                                                        borderRadius: '8px',
-                                                        fontSize: '0.875rem',
-                                                        color: '#0f172a',
-                                                        resize: 'vertical',
-                                                        outline: 'none',
-                                                        fontFamily: 'Inter, sans-serif',
-                                                        lineHeight: '1.5',
-                                                        boxSizing: 'border-box'
+                                                        padding: '12px',
+                                                        marginTop: '1rem',
+                                                        opacity: isSubmittingRevision ? 0.6 : 1,
+                                                        cursor: isSubmittingRevision ? 'not-allowed' : 'pointer'
                                                     }}
-                                                />
-                                            </div>
-
-                                            {/* Submit */}
-                                            <button
-                                                className="edit-submission-btn"
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '12px',
-                                                    marginTop: '1rem',
-                                                    opacity: isSubmittingRevision ? 0.6 : 1,
-                                                    cursor: isSubmittingRevision ? 'not-allowed' : 'pointer'
-                                                }}
-                                                onClick={handleRevisionSubmit}
-                                                disabled={isSubmittingRevision}
-                                                type="button"
-                                            >
-                                                {isSubmittingRevision
-                                                    ? 'Submitting...'
-                                                    : selectedLog.Research?.status?.toLowerCase().includes('minor')
-                                                        ? 'Submit Response'
-                                                        : 'Submit Revision'}
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                            )}
+                                                    onClick={handleRevisionSubmit}
+                                                    disabled={isSubmittingRevision}
+                                                    type="button"
+                                                >
+                                                    {isSubmittingRevision
+                                                        ? 'Submitting...'
+                                                        : selectedLog.Research?.status?.toLowerCase().includes('minor')
+                                                            ? 'Submit Response'
+                                                            : 'Submit Revision'}
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
                         </div>
                     </div>
                 </div>

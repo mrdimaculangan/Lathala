@@ -30,7 +30,8 @@ export default function AdminMasterInventory() {
             result = result.filter(r => {
                 if (filterStatus === 'approved') return r.current_status === 'approved';
                 if (filterStatus === 'rejected') return r.current_status === 'rejected';
-                if (filterStatus === 'revision') return r.current_status === 'revision';
+                if (filterStatus === 'minor_revision') return r.current_status === 'minor_revision';
+                if (filterStatus === 'major_revision') return r.current_status === 'major_revision';
                 return true;
             });
         }
@@ -56,82 +57,97 @@ export default function AdminMasterInventory() {
 
     async function loadMasterData() {
         setLoading(true);
+
         try {
-            // Step 1: Get all Evaluation_Research entries
-            const { data: evaluationsData, error: evalError } = await supabase
-                .from('Evaluation_Research')
-                .select('*')
-                .order('evaluated_at', { ascending: false });
+            const { data: researchData, error: researchError } = await supabase
+                .from('Research')
+                .select(`
+                *,
+                Researcher (
+                    researcher_id,
+                    user_id
+                )
+            `)
+                .order('registration_date', { ascending: false });
 
-            if (evalError) throw evalError;
+            if (researchError) throw researchError;
 
-            if (!evaluationsData || evaluationsData.length === 0) {
+            if (!researchData || researchData.length === 0) {
                 setResearches([]);
                 setLoading(false);
                 return;
             }
 
-            // Step 2: Get unique research IDs
-            const researchIds = [...new Set(evaluationsData.map(er => er.research_id))];
+            const researchIds = researchData.map(r => r.research_id);
+            const { data: evaluationsData, error: evalError } = await supabase
+                .from('Evaluation_Research')
+                .select('*')
+                .in('research_id', researchIds)
+                .order('evaluated_at', { ascending: false });
 
-            // Step 3: Get research details with author info
-            const { data: researchData, error: researchError } = await supabase
-                .from('Research')
-                .select(`
-                    *,
-                    Researcher (
-                        researcher_id,
-                        user_id
-                    )
-                `)
-                .in('research_id', researchIds);
+            if (evalError) throw evalError;
 
-            if (researchError) throw researchError;
+            const researcherIds = researchData
+                .map(r => r.Researcher?.user_id)
+                .filter(id => id);
 
-            // Step 4: Get all researcher user details
-            const researcherIds = researchData.map(r => r.Researcher?.user_id).filter(id => id);
             let researcherUsersMap = {};
 
             if (researcherIds.length > 0) {
+
                 const { data: usersData, error: usersError } = await supabase
                     .from('Users')
                     .select('user_id, first_name, last_name, email')
                     .in('user_id', researcherIds);
 
                 if (!usersError && usersData) {
-                    researcherUsersMap = {};
+
                     usersData.forEach(user => {
                         researcherUsersMap[user.user_id] = user;
                     });
                 }
             }
 
-            // Step 5: Get all evaluator details
-            const evaluatorIds = [...new Set(evaluationsData.map(er => er.evaluator_id).filter(id => id))];
+            const evaluatorIds = [
+                ...new Set(
+                    (evaluationsData || [])
+                        .map(er => er.evaluator_id)
+                        .filter(id => id)
+                )
+            ];
+
             let evaluatorUsersMap = {};
 
             if (evaluatorIds.length > 0) {
+
                 const { data: evaluatorsData, error: evaluatorsError } = await supabase
                     .from('Evaluator')
                     .select('evaluator_id, user_id')
                     .in('evaluator_id', evaluatorIds);
 
                 if (!evaluatorsError && evaluatorsData) {
-                    const userIds = evaluatorsData.map(ev => ev.user_id).filter(id => id);
+
+                    const userIds = evaluatorsData
+                        .map(ev => ev.user_id)
+                        .filter(id => id);
 
                     if (userIds.length > 0) {
+
                         const { data: usersData, error: usersError } = await supabase
                             .from('Users')
                             .select('user_id, first_name, last_name, email')
                             .in('user_id', userIds);
 
                         if (!usersError && usersData) {
+
                             const userMap = {};
+
                             usersData.forEach(user => {
                                 userMap[user.user_id] = user;
                             });
 
                             evaluatorsData.forEach(ev => {
+
                                 if (userMap[ev.user_id]) {
                                     evaluatorUsersMap[ev.evaluator_id] = userMap[ev.user_id];
                                 }
@@ -141,14 +157,16 @@ export default function AdminMasterInventory() {
                 }
             }
 
-            // Step 6: Group evaluations by research_id
             const evaluationsByResearch = {};
-            evaluationsData.forEach(evaluation => {
+
+            (evaluationsData || []).forEach(evaluation => {
+
                 if (!evaluationsByResearch[evaluation.research_id]) {
                     evaluationsByResearch[evaluation.research_id] = [];
                 }
 
                 const evaluatorUser = evaluatorUsersMap[evaluation.evaluator_id];
+
                 let evaluatorName = evaluation.evaluator_name;
                 let evaluatorEmail = evaluation.evaluator_email;
 
@@ -175,35 +193,47 @@ export default function AdminMasterInventory() {
                 });
             });
 
-            // Step 7: Combine research with evaluations
             const processedResearches = (researchData || []).map(research => {
-                const evaluations = evaluationsByResearch[research.research_id] || [];
 
-                const authorUser = researcherUsersMap[research.Researcher?.user_id];
-                const researcherName = authorUser ?
-                    `${authorUser.first_name} ${authorUser.last_name}` :
-                    'Unknown';
+                const evaluations =
+                    evaluationsByResearch[research.research_id] || [];
+
+                const authorUser =
+                    researcherUsersMap[research.Researcher?.user_id];
+
+                const researcherName = authorUser
+                    ? `${authorUser.first_name} ${authorUser.last_name}`
+                    : 'Unknown';
+
                 const researcherEmail = authorUser?.email;
 
-                const latestEvaluation = evaluations.length > 0 ?
-                    evaluations.reduce((latest, current) =>
-                        new Date(current.evaluation_date) > new Date(latest.evaluation_date) ? current : latest
-                    ) : null;
+                let current_status = (research.status || 'pending').toLowerCase();
+
+                if (current_status.includes('approve')) current_status = 'approved';
+                else if (current_status.includes('reject')) current_status = 'rejected';
+                else if (current_status.includes('minor')) current_status = 'minor_revision';
+                else if (current_status.includes('major')) current_status = 'major_revision';
+                else current_status = 'pending';
 
                 return {
                     ...research,
                     researcher_name: researcherName,
                     researcher_email: researcherEmail,
                     evaluators: evaluations,
-                    current_status: latestEvaluation?.recommendation || 'pending'
+                    current_status
                 };
             });
 
             setResearches(processedResearches);
+
         } catch (error) {
+
             console.error('Error loading Master Inventory:', error);
+
             alert('Failed to load master inventory. Please refresh and try again.');
+
         } finally {
+
             setLoading(false);
         }
     }
@@ -257,8 +287,18 @@ export default function AdminMasterInventory() {
         const s = status?.toLowerCase();
         if (s === 'approved') return 'status-approved';
         if (s === 'rejected') return 'status-rejected';
-        if (s === 'revision') return 'status-revision';
+        if (s === 'minor_revision') return 'status-minor-revision';
+        if (s === 'major_revision') return 'status-major-revision';
         return 'status-pending';
+    };
+
+    const getStatusDisplayText = (status) => {
+        const s = status?.toLowerCase();
+        if (s === 'approved') return 'APPROVED';
+        if (s === 'rejected') return 'REJECTED';
+        if (s === 'minor_revision') return 'MINOR REVISION';
+        if (s === 'major_revision') return 'MAJOR REVISION';
+        return 'PENDING';
     };
 
     const renderPagination = () => {
@@ -320,8 +360,9 @@ export default function AdminMasterInventory() {
                             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                                 <option value="all">All Status</option>
                                 <option value="approved">Approved</option>
+                                <option value="minor_revision">Minor Revision</option>
+                                <option value="major_revision">Major Revision</option>
                                 <option value="rejected">Rejected</option>
-                                <option value="revision">Revision Required</option>
                             </select>
                         </div>
                     </div>
@@ -390,7 +431,7 @@ export default function AdminMasterInventory() {
                                         </td>
                                         <td>
                                             <span className={`role-badge ${getStatusClass(research.current_status)}`}>
-                                                {research.current_status?.toUpperCase()}
+                                                {getStatusDisplayText(research.current_status)}
                                             </span>
                                         </td>
                                         <td>
@@ -451,7 +492,7 @@ export default function AdminMasterInventory() {
                                             <label>Status</label>
                                             <p>
                                                 <span className={`role-badge ${getStatusClass(selectedStudy.current_status)}`}>
-                                                    {selectedStudy.current_status?.toUpperCase()}
+                                                    {getStatusDisplayText(selectedStudy.current_status)}
                                                 </span>
                                             </p>
                                         </div>
@@ -535,7 +576,7 @@ export default function AdminMasterInventory() {
                                                             <span style={{ fontSize: '12px', color: '#64748b' }}>{evaluation.email}</span>
                                                         </div>
                                                         <span className={`role-badge ${getStatusClass(evaluation.recommendation)}`}>
-                                                            {evaluation.recommendation?.toUpperCase()}
+                                                            {getStatusDisplayText(evaluation.recommendation)}
                                                         </span>
                                                     </div>
                                                     <div className="evaluation-date" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
@@ -582,7 +623,7 @@ export default function AdminMasterInventory() {
                                     )}
                                 </div>
 
-                                {/* Attached Files */}
+                                {/* Attached Files 
                                 <div className="detail-section">
                                     <h3>Attached Files</h3>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -605,7 +646,7 @@ export default function AdminMasterInventory() {
                                             ))
                                         )}
                                     </div>
-                                </div>
+                                </div>*/}
                             </div>
                         </div>
                     </div>

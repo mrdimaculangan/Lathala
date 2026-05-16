@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
-import { UserPlus, X, Check, Users, Search } from 'lucide-react';
+import { UserPlus, X, Check, Users, Search, RotateCcw } from 'lucide-react';
 import AdminNavbar from "./AdminNavbar";
 import "./AdminQueue.css";
 
@@ -13,8 +13,8 @@ export default function AdminQueue() {
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [assignTarget, setAssignTarget] = useState(null);
     const [evaluators, setEvaluators] = useState([]);
-    const [selectedEvaluatorIds, setSelectedEvaluatorIds] = useState([]);
-    const [alreadyAssigned, setAlreadyAssigned] = useState([]);
+    const [selectedEvaluatorId, setSelectedEvaluatorId] = useState(null);
+    const [alreadyAssigned, setAlreadyAssigned] = useState(null);
     const [saving, setSaving] = useState(false);
 
     // Pagination and Filter states
@@ -51,7 +51,6 @@ export default function AdminQueue() {
         setCurrentPage(1);
     }, [searchTerm, filterStatus, researches]);
 
-    // Pagination derived data
     const totalPages = Math.ceil(filteredResearches.length / ITEMS_PER_PAGE);
     const paginatedResearches = filteredResearches.slice(
         (currentPage - 1) * ITEMS_PER_PAGE,
@@ -61,16 +60,29 @@ export default function AdminQueue() {
     async function loadQueueData() {
         setLoading(true);
         try {
-            // Get research IDs that already have evaluations (completed)
-            const { data: evaluatedResearch, error: evalError } = await supabase
-                .from('Evaluation_Research')
-                .select('research_id');
+            const [evalRes, revRes] = await Promise.all([
+                supabase.from('Evaluation_Research').select('research_id, overall_recommendation'),
+                supabase.from('ResearchRevisions').select('research_id, status').eq('status', 'Pending')
+            ]);
 
-            if (evalError) throw evalError;
+            if (evalRes.error) throw evalRes.error;
 
-            const evaluatedIds = evaluatedResearch?.map(er => er.research_id) || [];
+            const latestEvalMap = {};
 
-            // Build query for unevaluated research
+            (evalRes.data || []).forEach(e => {
+                if (!latestEvalMap[e.research_id]) {
+                    latestEvalMap[e.research_id] = e.overall_recommendation;
+                }
+            });
+
+            const finishedIds = Object.entries(latestEvalMap)
+                .filter(([_, rec]) => {
+                    const r = rec?.toLowerCase() || '';
+                    return r === 'approved' || r === 'rejected';
+                })
+                .map(([id]) => Number(id));
+            const pendingRevisionIds = revRes.data?.map(r => r.research_id) || [];
+
             let query = supabase
                 .from('Research')
                 .select(`
@@ -81,7 +93,7 @@ export default function AdminQueue() {
                     registration_date,
                     status,
                     researcher_id,
-                    Researcher (
+                    Researcher:researcher_id (
                         researcher_id,
                         user_id,
                         Users (
@@ -93,16 +105,13 @@ export default function AdminQueue() {
                 `)
                 .order('registration_date', { ascending: false });
 
-            // Filter out already evaluated research
-            if (evaluatedIds.length > 0) {
-                query = query.not('research_id', 'in', `(${evaluatedIds.join(',')})`);
+            if (finishedIds.length > 0) {
+                query = query.not('research_id', 'in', `(${finishedIds.join(',')})`);
             }
 
             const { data: researchData, error: researchError } = await query;
-
             if (researchError) throw researchError;
 
-            // Get assigned evaluators for these research items
             if (researchData && researchData.length > 0) {
                 const researchIds = researchData.map(r => r.research_id);
 
@@ -127,33 +136,42 @@ export default function AdminQueue() {
 
                 if (queueError) throw queueError;
 
-                // Process and combine the data
                 const processedResearches = researchData.map(research => {
                     const assignedEvaluators = (queueData || [])
                         .filter(q => q.research_id === research.research_id)
-                        .map(q => {
-                            const firstName = q.Evaluator?.Users?.first_name || '';
-                            const lastName = q.Evaluator?.Users?.last_name || '';
-                            const fullName = `${firstName} ${lastName}`.trim();
+                        .map(q => ({
+                            id: q.evaluator_id,
+                            name: `${q.Evaluator?.Users?.first_name || ''} ${q.Evaluator?.Users?.last_name || ''}`.trim() || 'Unknown',
+                            email: q.Evaluator?.Users?.email || 'No email',
+                            assigned_at: q.assigned_at,
+                            status: q.status
+                        }));
 
-                            return {
-                                id: q.evaluator_id,
-                                name: fullName || 'Unknown',
-                                email: q.Evaluator?.Users?.email || 'No email',
-                                assigned_at: q.assigned_at,
-                                status: q.status
-                            };
-                        });
+                    const isAssigned = assignedEvaluators.length > 0;
 
-                    const researcherFirstName = research.Researcher?.Users?.first_name || '';
-                    const researcherLastName = research.Researcher?.Users?.last_name || '';
-                    const researcherFullName = `${researcherFirstName} ${researcherLastName}`.trim();
+                    const isRevision =
+                        pendingRevisionIds.includes(research.research_id) ||
+                        research.status?.toLowerCase().includes('revision');
+
+                    let queueStatus = 'Pending Assignment';
+
+                    if (isRevision) {
+                        queueStatus = 'Resubmitted Revision';
+                    } else if (isAssigned) {
+                        queueStatus = 'Under Review';
+                    }
 
                     return {
                         ...research,
-                        researcher_name: researcherFullName || 'Unknown',
+
+                        isRevision,
+
+                        researcher_name: `${research.Researcher?.Users?.first_name || ''} ${research.Researcher?.Users?.last_name || ''}`.trim() || 'Unknown',
                         researcher_email: research.Researcher?.Users?.email,
-                        assigned_evaluators: assignedEvaluators
+
+                        assigned_evaluators: assignedEvaluators,
+
+                        queueStatus
                     };
                 });
 
@@ -196,21 +214,16 @@ export default function AdminQueue() {
 
             if (assignedError) throw assignedError;
 
-            const formattedEvaluators = (evaluatorsData || []).map(ev => {
-                const firstName = ev.Users?.first_name || '';
-                const lastName = ev.Users?.last_name || '';
-                const fullName = `${firstName} ${lastName}`.trim();
-
-                return {
-                    evaluator_id: ev.evaluator_id,
-                    name: fullName || 'Unknown',
-                    email: ev.Users?.email || 'No email'
-                };
-            });
+            const formattedEvaluators = (evaluatorsData || []).map(ev => ({
+                evaluator_id: ev.evaluator_id,
+                name: `${ev.Users?.first_name || ''} ${ev.Users?.last_name || ''}`.trim() || 'Unknown',
+                email: ev.Users?.email || 'No email'
+            }));
 
             setEvaluators(formattedEvaluators);
-            setAlreadyAssigned(assignedData || []);
-            setSelectedEvaluatorIds((assignedData || []).map(a => a.evaluator_id));
+            const current = assignedData && assignedData.length > 0 ? assignedData[0] : null;
+            setAlreadyAssigned(current);
+            setSelectedEvaluatorId(current ? current.evaluator_id : null);
         } catch (err) {
             console.error('Error loading evaluators:', err);
             alert('Failed to load evaluators. Please try again.');
@@ -219,39 +232,45 @@ export default function AdminQueue() {
 
     const handleSaveAssignments = async () => {
         setSaving(true);
-        const currentSelection = selectedEvaluatorIds.map(id => Number(id));
-        const alreadyIds = alreadyAssigned.map(a => Number(a.evaluator_id));
-
-        const toAdd = currentSelection.filter(id => !alreadyIds.includes(id));
-        const toRemove = alreadyIds.filter(id => !currentSelection.includes(id));
+        const currentSelection = selectedEvaluatorId ? Number(selectedEvaluatorId) : null;
+        const alreadyId = alreadyAssigned ? Number(alreadyAssigned.evaluator_id) : null;
 
         try {
-            if (toAdd.length > 0) {
-                const newRows = toAdd.map(id => ({
-                    research_id: assignTarget.research_id,
-                    evaluator_id: id,
-                    assigned_at: new Date().toISOString(),
-                    status: 'Pending'
-                }));
-
-                const { error: insertError } = await supabase
-                    .from('Research_Queue')
-                    .insert(newRows);
-
-                if (insertError) throw insertError;
-            }
-
-            if (toRemove.length > 0) {
+            if (alreadyId !== null && alreadyId !== currentSelection) {
                 const { error: deleteError } = await supabase
                     .from('Research_Queue')
                     .delete()
                     .eq('research_id', assignTarget.research_id)
-                    .in('evaluator_id', toRemove);
+                    .eq('evaluator_id', alreadyId);
 
                 if (deleteError) throw deleteError;
             }
 
-            alert(`Successfully updated evaluators for ${assignTarget.hru_no}`);
+            if (currentSelection !== null && currentSelection !== alreadyId) {
+                const { error: insertError } = await supabase
+                    .from('Research_Queue')
+                    .insert({
+                        research_id: assignTarget.research_id,
+                        evaluator_id: currentSelection,
+                        assigned_at: new Date().toISOString(),
+                        status: 'Pending'
+                    });
+
+                if (insertError) throw insertError;
+
+                // NEW: Clear the Pending revision record once assigned
+                if (assignTarget.isRevision) {
+                    await supabase
+                        .from('ResearchRevisions')
+                        .update({ status: 'In Review' })
+                        .eq('research_id', assignTarget.research_id)
+                        .eq('status', 'Pending');
+                }
+
+                await createAssignmentNotification(currentSelection);
+            }
+
+            alert(`Successfully updated evaluator for ${assignTarget.hru_no}`);
             setIsAssignModalOpen(false);
             await loadQueueData();
         } catch (error) {
@@ -262,12 +281,50 @@ export default function AdminQueue() {
         }
     };
 
-    const toggleEvaluator = (evaluatorId) => {
-        setSelectedEvaluatorIds(prev =>
-            prev.includes(evaluatorId)
-                ? prev.filter(id => id !== evaluatorId)
-                : [...prev, evaluatorId]
-        );
+    const createAssignmentNotification = async (newEvaluatorId) => {
+        try {
+            const { data: evaluatorData, error: evaluatorError } = await supabase
+                .from('Evaluator')
+                .select('evaluator_id, user_id')
+                .eq('evaluator_id', newEvaluatorId)
+                .single();
+
+            if (evaluatorError || !evaluatorData) return;
+
+            const { data: { session } } = await supabase.auth.getSession();
+            const adminUserId = session?.user?.id;
+
+            const { data: logData, error: logError } = await supabase
+                .from('ResearchActivityLog')
+                .insert([{
+                    research_id: assignTarget.research_id,
+                    actor_id: adminUserId,
+                    actor_role: 'admin',
+                    action: 'assigned_evaluators',
+                    notes: `Research "${assignTarget.title}" (${assignTarget.hru_no}) assigned to evaluator ID: ${newEvaluatorId}`,
+                }])
+                .select()
+                .single();
+
+            if (logError) console.error('Log error:', logError);
+
+            await supabase
+                .from('evaluator_notifications')
+                .insert({
+                    recipient_id: evaluatorData.user_id,
+                    research_id: assignTarget.research_id,
+                    log_id: logData?.log_id || null,
+                    message: `You have been assigned to evaluate research "${assignTarget.title}" (${assignTarget.hru_no}).`,
+                    is_read: false,
+                    is_deleted: false,
+                });
+        } catch (error) {
+            console.error('Error in notification:', error);
+        }
+    };
+
+    const selectEvaluator = (evaluatorId) => {
+        setSelectedEvaluatorId(prev => prev === evaluatorId ? null : evaluatorId);
     };
 
     const renderPagination = () => {
@@ -325,8 +382,8 @@ export default function AdminQueue() {
                         <div className="filter-wrapper">
                             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                                 <option value="all">All Status</option>
-                                <option value="assigned">Has Evaluators</option>
-                                <option value="unassigned">No Evaluators</option>
+                                <option value="assigned">Has Evaluator</option>
+                                <option value="unassigned">No Evaluator</option>
                             </select>
                         </div>
                         <div className="queue-stats">
@@ -345,7 +402,8 @@ export default function AdminQueue() {
                                 <th>HRU NO.</th>
                                 <th>RESEARCH TITLE</th>
                                 <th>AUTHOR</th>
-                                <th>ASSIGNED EVALUATORS</th>
+                                <th>ASSIGNED EVALUATOR</th>
+                                <th>QUEUE STATUS</th>
                                 <th>SUBMITTED DATE</th>
                                 <th>ACTIONS</th>
                             </tr>
@@ -362,11 +420,6 @@ export default function AdminQueue() {
                                     <td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>
                                         <div className="empty-state">
                                             <p>No pending research found.</p>
-                                            <p className="empty-subtitle">
-                                                {searchTerm || filterStatus !== 'all'
-                                                    ? 'Try adjusting your search or filter criteria.'
-                                                    : 'All research has been evaluated or is in progress.'}
-                                            </p>
                                         </div>
                                     </td>
                                 </tr>
@@ -374,33 +427,49 @@ export default function AdminQueue() {
                                 paginatedResearches.map((research) => (
                                     <tr key={research.research_id}>
                                         <td className="hru-cell">{research.hru_no}</td>
-                                        <td className="title-cell">{research.title}</td>
+                                        <td className="title-cell">
+                                            <div className="title-wrapper">
+                                                <span className="research-title-text">{research.title}</span>
+                                                {research.isRevision ? (
+                                                    <span className="badge-re-evaluation">
+                                                        <RotateCcw size={12} /> RE-EVALUATION
+                                                    </span>
+                                                ) : research.assigned_evaluators.length === 0 ? (
+                                                    <span className="badge-new-submission">NEW SUBMISSION</span>
+                                                ) : (
+                                                    <span className="badge-pending-eval">UNDER REVIEW</span>
+                                                )}
+                                            </div>
+                                        </td>
                                         <td>{research.researcher_name}</td>
                                         <td>
                                             {research.assigned_evaluators && research.assigned_evaluators.length > 0 ? (
                                                 <div className="evaluators-container">
                                                     {research.assigned_evaluators.map((assignedEval) => (
-                                                        <span
-                                                            key={assignedEval.id}
-                                                            className="evaluator-chip"
-                                                            data-email={assignedEval.email}
-                                                            title={assignedEval.email}
-                                                        >
+                                                        <span key={assignedEval.id} className="evaluator-chip">
                                                             {assignedEval.name}
                                                         </span>
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <span className="no-evaluators">No evaluators assigned</span>
+                                                <span className="no-evaluators">No evaluator assigned</span>
                                             )}
+                                        </td>
+                                        <td>
+                                            <span
+                                                className={`queue-status-badge ${research.queueStatus === 'Under Review'
+                                                    ? 'status-under-review'
+                                                    : research.queueStatus === 'Resubmitted Revision'
+                                                        ? 'status-revision'
+                                                        : 'status-pending'
+                                                    }`}
+                                            >
+                                                {research.queueStatus}
+                                            </span>
                                         </td>
                                         <td>{new Date(research.registration_date).toLocaleDateString()}</td>
                                         <td className="action-btns">
-                                            <button
-                                                className="icon-btn assign-btn"
-                                                onClick={() => handleAssignClick(research)}
-                                                title="Assign Evaluators"
-                                            >
+                                            <button className="icon-btn assign-btn" onClick={() => handleAssignClick(research)}>
                                                 <UserPlus size={18} />
                                             </button>
                                         </td>
@@ -414,22 +483,20 @@ export default function AdminQueue() {
                 {!loading && filteredResearches.length > 0 && (
                     <div className="pagination-wrapper">
                         <div className="pagination-info">
-                            Showing {filteredResearches.length === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1}–
-                            {Math.min(currentPage * ITEMS_PER_PAGE, filteredResearches.length)} of {filteredResearches.length} results
+                            Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredResearches.length)} of {filteredResearches.length} results
                         </div>
                         {renderPagination()}
                     </div>
                 )}
 
-                {/* Assign Evaluators Modal */}
                 {isAssignModalOpen && assignTarget && (
                     <div className="modal-overlay" onClick={() => !saving && setIsAssignModalOpen(false)}>
                         <div className="admin-modal assign-modal" onClick={(e) => e.stopPropagation()}>
                             <div className="modal-header">
                                 <div>
                                     <div className="hru-tag">{assignTarget.hru_no}</div>
-                                    <h2>Assign Evaluators</h2>
-                                    <p className="assign-subtitle">Select evaluators to review this research</p>
+                                    <h2>Assign Evaluator</h2>
+                                    <p className="assign-subtitle">Select an evaluator to review this research</p>
                                 </div>
                                 <button className="icon-btn close-modal-btn" onClick={() => !saving && setIsAssignModalOpen(false)}>
                                     <X size={20} />
@@ -459,27 +526,25 @@ export default function AdminQueue() {
                             </div>
 
                             <div className="detail-section">
-                                <h3>Select Evaluators</h3>
+                                <h3>Select Evaluator</h3>
                                 <div className="evaluator-list">
                                     {evaluators.map((ev) => {
-                                        const isChecked = selectedEvaluatorIds.includes(ev.evaluator_id);
-                                        const isAlreadyAssigned = alreadyAssigned.some(a => a.evaluator_id === ev.evaluator_id);
+                                        const isSelected = selectedEvaluatorId === ev.evaluator_id;
+                                        const isAlreadyAssigned = alreadyAssigned?.evaluator_id === ev.evaluator_id;
 
                                         return (
                                             <div
                                                 key={ev.evaluator_id}
-                                                className={`evaluator-item ${isChecked ? 'selected' : ''} ${isAlreadyAssigned && !isChecked ? 'already-in' : ''}`}
-                                                onClick={() => toggleEvaluator(ev.evaluator_id)}
+                                                className={`evaluator-item ${isSelected ? 'selected' : ''}`}
+                                                onClick={() => selectEvaluator(ev.evaluator_id)}
                                             >
-                                                <div className={`evaluator-checkbox ${isChecked ? 'checked' : ''}`}>
-                                                    {isChecked && <Check size={14} />}
+                                                <div className={`evaluator-radio ${isSelected ? 'checked' : ''}`}>
+                                                    {isSelected && <Check size={14} />}
                                                 </div>
                                                 <div className="evaluator-info">
                                                     <span className="evaluator-name">
                                                         {ev.name}
-                                                        {isAlreadyAssigned && !isChecked && (
-                                                            <span className="assigned-tag">Currently Assigned</span>
-                                                        )}
+                                                        {isAlreadyAssigned && <span className="assigned-tag">Currently Assigned</span>}
                                                     </span>
                                                     <span className="evaluator-email">{ev.email}</span>
                                                 </div>
@@ -489,21 +554,13 @@ export default function AdminQueue() {
                                 </div>
                                 <div className="assign-actions">
                                     <div className="selected-count">
-                                        {selectedEvaluatorIds.length} evaluator(s) selected
+                                        {selectedEvaluatorId ? '1 evaluator selected' : 'No evaluator selected'}
                                     </div>
                                     <div className="assign-btns">
-                                        <button
-                                            className="cancel-assign-btn"
-                                            onClick={() => setIsAssignModalOpen(false)}
-                                            disabled={saving}
-                                        >
+                                        <button className="cancel-assign-btn" onClick={() => setIsAssignModalOpen(false)} disabled={saving}>
                                             Cancel
                                         </button>
-                                        <button
-                                            className="save-assign-btn"
-                                            onClick={handleSaveAssignments}
-                                            disabled={selectedEvaluatorIds.length === 0 || saving}
-                                        >
+                                        <button className="save-assign-btn" onClick={handleSaveAssignments} disabled={!selectedEvaluatorId || saving}>
                                             {saving ? 'Saving...' : 'Save to Queue'}
                                         </button>
                                     </div>

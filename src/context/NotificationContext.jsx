@@ -13,10 +13,18 @@ export const useNotifications = () => {
 };
 
 export const NotificationProvider = ({ children }) => {
-    const { session } = UserAuth();
+    const { session, userRole } = UserAuth();
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(true);
+
+    // Determine which table to use based on role
+    const getTable = () => {
+        const role = userRole?.toLowerCase();
+        if (role === 'evaluator') return 'evaluator_notifications';
+        if (role === 'researcher') return 'researcher_notifications';
+        return null;
+    };
 
     const fetchNotifications = async () => {
         if (!session?.user?.id) {
@@ -26,10 +34,18 @@ export const NotificationProvider = ({ children }) => {
             return;
         }
 
+        const table = getTable();
+        if (!table) {
+            setNotifications([]);
+            setUnreadCount(0);
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
             const { data, error } = await supabase
-                .from('researcher_notifications')
+                .from(table)
                 .select(`
                     *,
                     Research ( title, research_files ( file_type ) )
@@ -41,7 +57,7 @@ export const NotificationProvider = ({ children }) => {
             if (error) {
                 console.error('Error fetching notifications:', error);
             } else {
-                console.log('Fetched notifications:', data);
+                console.log(`Fetched ${table}:`, data);
                 setNotifications(data || []);
                 setUnreadCount(data?.filter(n => !n.is_read).length || 0);
             }
@@ -52,58 +68,53 @@ export const NotificationProvider = ({ children }) => {
         }
     };
 
-    // Mark a single notification as read
     const markAsRead = async (notificationId) => {
         console.log('markAsRead called with ID:', notificationId);
-        
         if (!session?.user?.id) return;
-        
-        // Optimistically update UI
+
+        const table = getTable();
+        if (!table) return;
+
         setNotifications(prev => prev.map(n =>
             n.notification_id === notificationId ? { ...n, is_read: true } : n
         ));
-        
+
         const wasUnread = notifications.find(n => n.notification_id === notificationId && !n.is_read);
-        if (wasUnread) {
-            setUnreadCount(prev => Math.max(0, prev - 1));
-        }
-        
+        if (wasUnread) setUnreadCount(prev => Math.max(0, prev - 1));
+
         try {
             const { error } = await supabase
-                .from('researcher_notifications')
+                .from(table)
                 .update({ is_read: true })
                 .eq('notification_id', notificationId);
 
             if (error) {
                 console.error('Error marking as read:', error);
-                // Rollback on error
                 setNotifications(prev => prev.map(n =>
                     n.notification_id === notificationId ? { ...n, is_read: false } : n
                 ));
-                if (wasUnread) {
-                    setUnreadCount(prev => prev + 1);
-                }
+                if (wasUnread) setUnreadCount(prev => prev + 1);
             }
         } catch (err) {
             console.error('Error in markAsRead:', err);
         }
     };
-    
-    // Mark all notifications as read
+
     const markAllAsRead = async () => {
         console.log('markAllAsRead called');
-        
         if (!session?.user?.id) return;
-        
+
+        const table = getTable();
+        if (!table) return;
+
         const unreadNotifications = notifications.filter(n => !n.is_read);
         if (unreadNotifications.length === 0) return;
 
         const notificationIds = unreadNotifications.map(n => n.notification_id);
-        console.log('Marking as read:', notificationIds);
-        
+
         try {
             const { data, error } = await supabase
-                .from('researcher_notifications')
+                .from(table)
                 .update({ is_read: true })
                 .in('notification_id', notificationIds)
                 .select();
@@ -114,65 +125,49 @@ export const NotificationProvider = ({ children }) => {
             }
 
             console.log('All marked as read successfully:', data);
-            
             setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
             setUnreadCount(0);
-            
         } catch (err) {
             console.error('Error in markAllAsRead:', err);
         }
     };
 
-   // Delete a notification
     const deleteNotification = async (notificationId) => {
         console.log('deleteNotification called with ID:', notificationId);
-        
         if (!session?.user?.id) return;
-        
-        // Optimistically update UI FIRST for better UX
+
+        const table = getTable();
+        if (!table) return;
+
         const deletedNotif = notifications.find(n => n.notification_id === notificationId);
         setNotifications(prev => prev.filter(n => n.notification_id !== notificationId));
-        if (deletedNotif && !deletedNotif.is_read) {
-            setUnreadCount(prev => Math.max(0, prev - 1));
-        }
-        
+        if (deletedNotif && !deletedNotif.is_read) setUnreadCount(prev => Math.max(0, prev - 1));
+
         try {
-            // Update database
             const { error } = await supabase
-                .from('researcher_notifications')
+                .from(table)
                 .update({ is_deleted: true })
                 .eq('notification_id', notificationId);
 
             if (error) {
-                // Rollback if database update fails
                 console.error('Error deleting notification:', error);
-                // Revert UI changes
                 if (deletedNotif) {
                     setNotifications(prev => [deletedNotif, ...prev]);
-                    if (!deletedNotif.is_read) {
-                        setUnreadCount(prev => prev + 1);
-                    }
+                    if (!deletedNotif.is_read) setUnreadCount(prev => prev + 1);
                 }
-                return;
+            } else {
+                console.log('Notification marked as deleted successfully');
             }
-
-            console.log('Notification marked as deleted successfully');
-            
         } catch (err) {
             console.error('Error in deleteNotification:', err);
-            // Rollback on error
             if (deletedNotif) {
                 setNotifications(prev => [deletedNotif, ...prev]);
-                if (!deletedNotif.is_read) {
-                    setUnreadCount(prev => prev + 1);
-                }
+                if (!deletedNotif.is_read) setUnreadCount(prev => prev + 1);
             }
         }
     };
 
-    const refreshNotifications = () => {
-        fetchNotifications();
-    };
+    const refreshNotifications = () => fetchNotifications();
 
     const clearNotifications = () => {
         setNotifications([]);
@@ -182,31 +177,30 @@ export const NotificationProvider = ({ children }) => {
 
     useEffect(() => {
         clearNotifications();
-        
-        if (!session?.user?.id) {
-            return;
-        }
+
+        if (!session?.user?.id || !userRole) return;
+
+        const table = getTable();
+        if (!table) return;
 
         fetchNotifications();
 
         const channel = supabase
-            .channel('notifications-context')
+            .channel(`notifications-${session.user.id}`)
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
-                table: 'researcher_notifications',
+                table: table,
                 filter: `recipient_id=eq.${session.user.id}`
             }, (payload) => {
                 console.log('New notification inserted:', payload.new);
                 setNotifications(prev => [payload.new, ...prev]);
-                if (!payload.new.is_read) {
-                    setUnreadCount(prev => prev + 1);
-                }
+                if (!payload.new.is_read) setUnreadCount(prev => prev + 1);
             })
             .on('postgres_changes', {
                 event: 'UPDATE',
                 schema: 'public',
-                table: 'researcher_notifications',
+                table: table,
                 filter: `recipient_id=eq.${session.user.id}`
             }, (payload) => {
                 console.log('Notification updated:', payload.new);
@@ -223,7 +217,7 @@ export const NotificationProvider = ({ children }) => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [session?.user?.id]);
+    }, [session?.user?.id, userRole]);
 
     const value = {
         notifications,

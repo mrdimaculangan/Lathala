@@ -29,7 +29,7 @@ export const NotificationProvider = ({ children }) => {
         try {
             setLoading(true);
             const { data, error } = await supabase
-                .from('researcher_notifications')
+                .from('evaluator_notifications')  // ← CHANGE THIS LINE
                 .select(`
                     *,
                     Research ( title, research_files ( file_type ) )
@@ -41,7 +41,7 @@ export const NotificationProvider = ({ children }) => {
             if (error) {
                 console.error('Error fetching notifications:', error);
             } else {
-                console.log('Fetched notifications:', data);
+                console.log('Fetched evaluator notifications:', data);
                 setNotifications(data || []);
                 setUnreadCount(data?.filter(n => !n.is_read).length || 0);
             }
@@ -52,13 +52,11 @@ export const NotificationProvider = ({ children }) => {
         }
     };
 
-    // Mark a single notification as read
     const markAsRead = async (notificationId) => {
-        console.log('markAsRead called with ID:', notificationId);
+     console.log('markAsRead called with ID:', notificationId);
         
         if (!session?.user?.id) return;
         
-        // Optimistically update UI
         setNotifications(prev => prev.map(n =>
             n.notification_id === notificationId ? { ...n, is_read: true } : n
         ));
@@ -70,13 +68,12 @@ export const NotificationProvider = ({ children }) => {
         
         try {
             const { error } = await supabase
-                .from('researcher_notifications')
+                .from('evaluator_notifications')  // ← CHANGE THIS LINE
                 .update({ is_read: true })
                 .eq('notification_id', notificationId);
 
             if (error) {
                 console.error('Error marking as read:', error);
-                // Rollback on error
                 setNotifications(prev => prev.map(n =>
                     n.notification_id === notificationId ? { ...n, is_read: false } : n
                 ));
@@ -88,8 +85,7 @@ export const NotificationProvider = ({ children }) => {
             console.error('Error in markAsRead:', err);
         }
     };
-    
-    // Mark all notifications as read
+
     const markAllAsRead = async () => {
         console.log('markAllAsRead called');
         
@@ -103,7 +99,7 @@ export const NotificationProvider = ({ children }) => {
         
         try {
             const { data, error } = await supabase
-                .from('researcher_notifications')
+                .from('evaluator_notifications')  // ← CHANGE THIS LINE
                 .update({ is_read: true })
                 .in('notification_id', notificationIds)
                 .select();
@@ -129,7 +125,6 @@ export const NotificationProvider = ({ children }) => {
         
         if (!session?.user?.id) return;
         
-        // Optimistically update UI FIRST for better UX
         const deletedNotif = notifications.find(n => n.notification_id === notificationId);
         setNotifications(prev => prev.filter(n => n.notification_id !== notificationId));
         if (deletedNotif && !deletedNotif.is_read) {
@@ -137,16 +132,13 @@ export const NotificationProvider = ({ children }) => {
         }
         
         try {
-            // Update database
             const { error } = await supabase
-                .from('researcher_notifications')
+                .from('evaluator_notifications')  // ← CHANGE THIS LINE
                 .update({ is_deleted: true })
                 .eq('notification_id', notificationId);
 
             if (error) {
-                // Rollback if database update fails
                 console.error('Error deleting notification:', error);
-                // Revert UI changes
                 if (deletedNotif) {
                     setNotifications(prev => [deletedNotif, ...prev]);
                     if (!deletedNotif.is_read) {
@@ -160,7 +152,6 @@ export const NotificationProvider = ({ children }) => {
             
         } catch (err) {
             console.error('Error in deleteNotification:', err);
-            // Rollback on error
             if (deletedNotif) {
                 setNotifications(prev => [deletedNotif, ...prev]);
                 if (!deletedNotif.is_read) {
@@ -169,6 +160,7 @@ export const NotificationProvider = ({ children }) => {
             }
         }
     };
+
 
     const refreshNotifications = () => {
         fetchNotifications();
@@ -180,6 +172,7 @@ export const NotificationProvider = ({ children }) => {
         setLoading(false);
     };
 
+    // Also update the realtime subscription
     useEffect(() => {
         clearNotifications();
         
@@ -194,7 +187,7 @@ export const NotificationProvider = ({ children }) => {
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
-                table: 'researcher_notifications',
+                table: 'evaluator_notifications',  // ← CHANGE THIS LINE
                 filter: `recipient_id=eq.${session.user.id}`
             }, (payload) => {
                 console.log('New notification inserted:', payload.new);
@@ -206,7 +199,7 @@ export const NotificationProvider = ({ children }) => {
             .on('postgres_changes', {
                 event: 'UPDATE',
                 schema: 'public',
-                table: 'researcher_notifications',
+                table: 'evaluator_notifications',  // ← CHANGE THIS LINE
                 filter: `recipient_id=eq.${session.user.id}`
             }, (payload) => {
                 console.log('Notification updated:', payload.new);

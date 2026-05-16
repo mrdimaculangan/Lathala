@@ -226,6 +226,7 @@ export default function AdminQueue() {
         const toRemove = alreadyIds.filter(id => !currentSelection.includes(id));
 
         try {
+            // Handle adding new evaluators
             if (toAdd.length > 0) {
                 const newRows = toAdd.map(id => ({
                     research_id: assignTarget.research_id,
@@ -239,8 +240,12 @@ export default function AdminQueue() {
                     .insert(newRows);
 
                 if (insertError) throw insertError;
+
+                // Create notifications for newly assigned evaluators
+                await createAssignmentNotifications(toAdd);
             }
 
+            // Handle removing evaluators
             if (toRemove.length > 0) {
                 const { error: deleteError } = await supabase
                     .from('Research_Queue')
@@ -259,6 +264,95 @@ export default function AdminQueue() {
             alert('Error saving assignments. Please try again.');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const createAssignmentNotifications = async (newEvaluatorIds) => {
+        try {
+            // Step 1: Get evaluator user_ids from Evaluator table
+            const { data: evaluatorData, error: evaluatorError } = await supabase
+                .from('Evaluator')
+                .select('evaluator_id, user_id')
+                .in('evaluator_id', newEvaluatorIds);
+
+            if (evaluatorError) {
+                console.error('Error fetching evaluator user_ids:', evaluatorError);
+                return;
+            }
+
+            if (!evaluatorData || evaluatorData.length === 0) {
+                console.warn('No evaluator user_ids found for notification');
+                return;
+            }
+
+            // Step 2: Get admin info for the activity log and notification message
+            const { data: { session } } = await supabase.auth.getSession();
+            const adminUserId = session?.user?.id;
+            
+            let adminName = 'Administrator';
+            if (adminUserId) {
+                const { data: adminData } = await supabase
+                    .from('Users')
+                    .select('first_name, last_name')
+                    .eq('user_id', adminUserId)
+                    .single();
+                
+                if (adminData) {
+                    adminName = `${adminData.first_name || ''} ${adminData.last_name || ''}`.trim() || 'Administrator';
+                }
+            }
+
+            // Step 3: Create activity log entry
+            const evaluatorNames = evaluators
+                .filter(ev => newEvaluatorIds.includes(ev.evaluator_id))
+                .map(ev => ev.name)
+                .join(', ');
+
+            const notesText = `Research "${assignTarget.title}" (${assignTarget.hru_no}) assigned to evaluator(s): ${evaluatorNames}`;
+
+            const { data: logData, error: logError } = await supabase
+                .from('ResearchActivityLog')
+                .insert([{
+                    research_id: assignTarget.research_id,
+                    actor_id: adminUserId, // Admin's auth user ID as the actor
+                    actor_role: 'admin',
+                    action: 'assigned_evaluators',
+                    notes: notesText,
+                }])
+                .select()
+                .single();
+
+            if (logError) {
+                console.error('Error creating activity log:', logError);
+                // Continue with notifications even if logging fails
+            }
+
+            // Step 4: Insert into evaluator_notifications table (CRITICAL - this is the right table)
+            const notifications = evaluatorData.map(ev => ({
+                recipient_id: ev.user_id,           // Evaluator's auth user UUID
+                research_id: assignTarget.research_id,
+                log_id: logData?.log_id || null,
+                message: `You have been assigned to evaluate research "${assignTarget.title}" (${assignTarget.hru_no}). Please review and submit your evaluation.`,
+                is_read: false,
+                is_deleted: false,
+            }));
+
+            // ✅ THIS IS THE KEY PART - inserting into evaluator_notifications table
+            const { data: insertedNotifications, error: notifError } = await supabase
+                .from('evaluator_notifications')  // ← Make sure this matches your table name exactly
+                .insert(notifications)
+                .select();
+
+            if (notifError) {
+                console.error('Error creating evaluator notifications:', notifError);
+                throw notifError;
+            }
+
+            console.log(`✅ Successfully created ${insertedNotifications.length} evaluator notification(s):`, insertedNotifications);
+
+        } catch (error) {
+            console.error('Error in createAssignmentNotifications:', error);
+            // Don't throw - we don't want to break the assignment if notifications fail
         }
     };
 

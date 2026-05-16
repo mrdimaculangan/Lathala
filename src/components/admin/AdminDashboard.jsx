@@ -5,7 +5,7 @@ import Navbar from './AdminNavbar';
 import {
     Users, ClipboardList, BookOpen, CheckCircle,
     Clock, TrendingUp, UserCheck, AlertCircle,
-    BarChart2, FileText
+    BarChart2, FileText, RotateCcw
 } from 'lucide-react';
 import './AdminDashboard.css';
 
@@ -49,13 +49,28 @@ export default function AdminDashboard() {
 
             const inQueueIds = new Set(queue.map(q => Number(q.research_id)));
 
-            const trulyPendingInQueue = queue.filter(q => !evaluatedIds.has(Number(q.research_id)));
+            const queueIds = queue.map(q => Number(q.research_id));
 
-            const unassignedPapers = allResearch.filter(r =>
-                !evaluatedIds.has(Number(r.research_id)) && !inQueueIds.has(Number(r.research_id))
+            const finalizedIds = new Set(
+                evaluations
+                    .filter(e => {
+                        const status = (e.overall_recommendation || '').toLowerCase();
+                        return status === 'approved' || status === 'rejected';
+                    })
+                    .map(e => Number(e.research_id))
             );
 
+            const trulyPendingInQueue = queueIds.filter(id => !finalizedIds.has(id));
             const normalize = (val) => val?.toLowerCase().replace(' ', '_') || '';
+
+            const unassignedPapers = allResearch.filter(r => {
+                const isInQueue = inQueueIds.has(Number(r.research_id));
+                const isFinished = evaluations.some(e =>
+                    Number(e.research_id) === Number(r.research_id) &&
+                    ['approved', 'rejected'].includes(normalize(e.overall_recommendation))
+                );
+                return !isInQueue && !isFinished;
+            });
 
             const approvedCount = evaluations.filter(e => normalize(e.overall_recommendation) === 'approved').length;
             const rejectedCount = evaluations.filter(e => normalize(e.overall_recommendation) === 'rejected').length;
@@ -227,29 +242,6 @@ export default function AdminDashboard() {
                                 <span className="breakdown-count">{stats.rejectedResearch}</span>
                             </div>
 
-                            {/* Pending (In Queue) Bar */}
-                            <div className="breakdown-item">
-                                <div className="breakdown-label">
-                                    <span className="dot amber" />
-                                    <span>In Queue</span>
-                                </div>
-                                <div className="breakdown-bar-wrap">
-                                    <div className="breakdown-bar amber" style={{ width: stats.totalResearch ? `${(stats.pendingQueue / stats.totalResearch) * 100}%` : '0%' }} />
-                                </div>
-                                <span className="breakdown-count">{stats.pendingQueue}</span>
-                            </div>
-
-                            {/* Unassigned Bar */}
-                            <div className="breakdown-item">
-                                <div className="breakdown-label">
-                                    <span className="dot gray" />
-                                    <span>Unassigned</span>
-                                </div>
-                                <div className="breakdown-bar-wrap">
-                                    <div className="breakdown-bar gray" style={{ width: stats.totalResearch ? `${(stats.unassignedResearch / stats.totalResearch) * 100}%` : '0%' }} />
-                                </div>
-                                <span className="breakdown-count">{stats.unassignedResearch}</span>
-                            </div>
                         </div>
 
                         {!loading && stats.evaluatedResearch > 0 && (
@@ -262,39 +254,74 @@ export default function AdminDashboard() {
                         )}
                     </div>
 
-                    {/* Recent Research */}
                     <div className="dash-card">
                         <div className="dash-card-header">
-                            <h2>Recent Submissions</h2>
-                            <Clock size={18} className="card-header-icon" />
+                            <h2>Workflow Status</h2>
+                            <RotateCcw size={18} className="card-header-icon" />
                         </div>
 
-                        {loading ? (
-                            <p className="dash-loading-text">Loading...</p>
-                        ) : recentResearch.length === 0 ? (
-                            <p className="dash-empty-text">No research submissions yet.</p>
-                        ) : (
-                            <div className="recent-list">
-                                {recentResearch.map((r) => (
-                                    <div key={r.research_id} className="recent-item">
-                                        <div className="recent-left">
-                                            <span className="recent-hru">{r.hru_no}</span>
-                                            <span className="recent-title">{r.title}</span>
-                                        </div>
-                                        <div className="recent-right">
-                                            {getStatusBadge(r.status)}
-                                            <span className="recent-date">
-                                                {new Date(r.registration_date).toLocaleDateString('en-US', {
-                                                    month: 'short', day: 'numeric', year: 'numeric'
-                                                })}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
+                        <div className="breakdown-list">
+
+                            <div className="breakdown-item">
+                                <div className="breakdown-label">
+                                    <span className="dot amber" />
+                                    <span>In Queue</span>
+                                </div>
+                                <div className="breakdown-bar-wrap">
+                                    <div className="breakdown-bar amber"
+                                        style={{ width: stats.totalResearch ? `${(stats.pendingQueue / stats.totalResearch) * 100}%` : '0%' }} />
+                                </div>
+                                <span className="breakdown-count">{stats.pendingQueue}</span>
                             </div>
-                        )}
+
+                            <div className="breakdown-item">
+                                <div className="breakdown-label">
+                                    <span className="dot gray" />
+                                    <span>Unassigned</span>
+                                </div>
+                                <div className="breakdown-bar-wrap">
+                                    <div className="breakdown-bar gray"
+                                        style={{ width: stats.totalResearch ? `${(stats.unassignedResearch / stats.totalResearch) * 100}%` : '0%' }} />
+                                </div>
+                                <span className="breakdown-count">{stats.unassignedResearch}</span>
+                            </div>
+
+                        </div>
                     </div>
                 </section>
+
+                {/* Recent Research */}
+                <div className="dash-card">
+                    <div className="dash-card-header">
+                        <h2>Recent Submissions</h2>
+                        <Clock size={18} className="card-header-icon" />
+                    </div>
+
+                    {loading ? (
+                        <p className="dash-loading-text">Loading...</p>
+                    ) : recentResearch.length === 0 ? (
+                        <p className="dash-empty-text">No research submissions yet.</p>
+                    ) : (
+                        <div className="recent-list">
+                            {recentResearch.map((r) => (
+                                <div key={r.research_id} className="recent-item">
+                                    <div className="recent-left">
+                                        <span className="recent-hru">{r.hru_no}</span>
+                                        <span className="recent-title">{r.title}</span>
+                                    </div>
+                                    <div className="recent-right">
+                                        {getStatusBadge(r.status)}
+                                        <span className="recent-date">
+                                            {new Date(r.registration_date).toLocaleDateString('en-US', {
+                                                month: 'short', day: 'numeric', year: 'numeric'
+                                            })}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
             </main>
         </div>

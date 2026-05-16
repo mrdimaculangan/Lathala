@@ -201,6 +201,24 @@
     line-height: 1.4;
 }
 
+.title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.revision-badge {
+    background-color: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fdba74;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -667,6 +685,43 @@
 .close-modal-btn:hover {
     background: #f1f5f9;
     transform: none;
+}
+
+.queue-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.queue-status-badge.status-pending {
+    background-color: #f3f4f6;
+    color: #4b5563;
+}
+
+.queue-status-badge.status-under-review {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+}
+
+.queue-status-badge.status-revision {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.queue-status-badge.status-approved {
+    background-color: #ecfdf5;
+    color: #059669;
+}
+
+.queue-status-badge.status-rejected {
+    background-color: #fef2f2;
+    color: #dc2626;
 }
 
 /* Responsive adjustments */

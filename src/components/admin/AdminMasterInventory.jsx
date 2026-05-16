@@ -57,77 +57,97 @@ export default function AdminMasterInventory() {
 
     async function loadMasterData() {
         setLoading(true);
+
         try {
-            const { data: evaluationsData, error: evalError } = await supabase
-                .from('Evaluation_Research')
-                .select('*')
-                .order('evaluated_at', { ascending: false });
+            const { data: researchData, error: researchError } = await supabase
+                .from('Research')
+                .select(`
+                *,
+                Researcher (
+                    researcher_id,
+                    user_id
+                )
+            `)
+                .order('registration_date', { ascending: false });
 
-            if (evalError) throw evalError;
+            if (researchError) throw researchError;
 
-            if (!evaluationsData || evaluationsData.length === 0) {
+            if (!researchData || researchData.length === 0) {
                 setResearches([]);
                 setLoading(false);
                 return;
             }
 
-            const researchIds = [...new Set(evaluationsData.map(er => er.research_id))];
+            const researchIds = researchData.map(r => r.research_id);
+            const { data: evaluationsData, error: evalError } = await supabase
+                .from('Evaluation_Research')
+                .select('*')
+                .in('research_id', researchIds)
+                .order('evaluated_at', { ascending: false });
 
-            const { data: researchData, error: researchError } = await supabase
-                .from('Research')
-                .select(`
-                    *,
-                    Researcher (
-                        researcher_id,
-                        user_id
-                    )
-                `)
-                .in('research_id', researchIds);
+            if (evalError) throw evalError;
 
-            if (researchError) throw researchError;
+            const researcherIds = researchData
+                .map(r => r.Researcher?.user_id)
+                .filter(id => id);
 
-            const researcherIds = researchData.map(r => r.Researcher?.user_id).filter(id => id);
             let researcherUsersMap = {};
 
             if (researcherIds.length > 0) {
+
                 const { data: usersData, error: usersError } = await supabase
                     .from('Users')
                     .select('user_id, first_name, last_name, email')
                     .in('user_id', researcherIds);
 
                 if (!usersError && usersData) {
-                    researcherUsersMap = {};
+
                     usersData.forEach(user => {
                         researcherUsersMap[user.user_id] = user;
                     });
                 }
             }
 
-            const evaluatorIds = [...new Set(evaluationsData.map(er => er.evaluator_id).filter(id => id))];
+            const evaluatorIds = [
+                ...new Set(
+                    (evaluationsData || [])
+                        .map(er => er.evaluator_id)
+                        .filter(id => id)
+                )
+            ];
+
             let evaluatorUsersMap = {};
 
             if (evaluatorIds.length > 0) {
+
                 const { data: evaluatorsData, error: evaluatorsError } = await supabase
                     .from('Evaluator')
                     .select('evaluator_id, user_id')
                     .in('evaluator_id', evaluatorIds);
 
                 if (!evaluatorsError && evaluatorsData) {
-                    const userIds = evaluatorsData.map(ev => ev.user_id).filter(id => id);
+
+                    const userIds = evaluatorsData
+                        .map(ev => ev.user_id)
+                        .filter(id => id);
 
                     if (userIds.length > 0) {
+
                         const { data: usersData, error: usersError } = await supabase
                             .from('Users')
                             .select('user_id, first_name, last_name, email')
                             .in('user_id', userIds);
 
                         if (!usersError && usersData) {
+
                             const userMap = {};
+
                             usersData.forEach(user => {
                                 userMap[user.user_id] = user;
                             });
 
                             evaluatorsData.forEach(ev => {
+
                                 if (userMap[ev.user_id]) {
                                     evaluatorUsersMap[ev.evaluator_id] = userMap[ev.user_id];
                                 }
@@ -138,12 +158,15 @@ export default function AdminMasterInventory() {
             }
 
             const evaluationsByResearch = {};
-            evaluationsData.forEach(evaluation => {
+
+            (evaluationsData || []).forEach(evaluation => {
+
                 if (!evaluationsByResearch[evaluation.research_id]) {
                     evaluationsByResearch[evaluation.research_id] = [];
                 }
 
                 const evaluatorUser = evaluatorUsersMap[evaluation.evaluator_id];
+
                 let evaluatorName = evaluation.evaluator_name;
                 let evaluatorEmail = evaluation.evaluator_email;
 
@@ -171,33 +194,46 @@ export default function AdminMasterInventory() {
             });
 
             const processedResearches = (researchData || []).map(research => {
-                const evaluations = evaluationsByResearch[research.research_id] || [];
 
-                const authorUser = researcherUsersMap[research.Researcher?.user_id];
-                const researcherName = authorUser ?
-                    `${authorUser.first_name} ${authorUser.last_name}` :
-                    'Unknown';
+                const evaluations =
+                    evaluationsByResearch[research.research_id] || [];
+
+                const authorUser =
+                    researcherUsersMap[research.Researcher?.user_id];
+
+                const researcherName = authorUser
+                    ? `${authorUser.first_name} ${authorUser.last_name}`
+                    : 'Unknown';
+
                 const researcherEmail = authorUser?.email;
 
-                const latestEvaluation = evaluations.length > 0 ?
-                    evaluations.reduce((latest, current) =>
-                        new Date(current.evaluation_date) > new Date(latest.evaluation_date) ? current : latest
-                    ) : null;
+                let current_status = (research.status || 'pending').toLowerCase();
+
+                if (current_status.includes('approve')) current_status = 'approved';
+                else if (current_status.includes('reject')) current_status = 'rejected';
+                else if (current_status.includes('minor')) current_status = 'minor_revision';
+                else if (current_status.includes('major')) current_status = 'major_revision';
+                else current_status = 'pending';
 
                 return {
                     ...research,
                     researcher_name: researcherName,
                     researcher_email: researcherEmail,
                     evaluators: evaluations,
-                    current_status: latestEvaluation?.recommendation || 'pending'
+                    current_status
                 };
             });
 
             setResearches(processedResearches);
+
         } catch (error) {
+
             console.error('Error loading Master Inventory:', error);
+
             alert('Failed to load master inventory. Please refresh and try again.');
+
         } finally {
+
             setLoading(false);
         }
     }
@@ -587,7 +623,7 @@ export default function AdminMasterInventory() {
                                     )}
                                 </div>
 
-                                {/* Attached Files */}
+                                {/* Attached Files 
                                 <div className="detail-section">
                                     <h3>Attached Files</h3>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -610,7 +646,7 @@ export default function AdminMasterInventory() {
                                             ))
                                         )}
                                     </div>
-                                </div>
+                                </div>*/}
                             </div>
                         </div>
                     </div>

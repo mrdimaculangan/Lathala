@@ -2,7 +2,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import Logout from '../Logout';
 import './ResearcherNavbar.css';
 import { UserAuth } from '../../context/AuthContext';
-import { useNotifications } from '../../context/NotificationContext';
+import { useResearcherNotifications } from '../../context/ResearcherNotificationContext';
 import { Search, User, LayoutGrid, FileText, Users, History, Settings, Bell, Eye, CheckCircle, Trash2 } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import { useState } from 'react';
@@ -17,7 +17,7 @@ export default function ResearcherNavbar() {
         markAsRead, 
         deleteNotification,
         refreshNotifications 
-    } = useNotifications();
+    } = useResearcherNotifications();
     const displayName = firstName ? `${firstName} ${lastName}` : session?.user?.email;
 
     const [showNotificationPopup, setShowNotificationPopup] = useState(false);

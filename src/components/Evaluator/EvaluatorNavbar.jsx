@@ -2,7 +2,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import Logout from '../Logout';
 import './EvaluatorNavbar.css';
 import { UserAuth } from '../../context/AuthContext';
-import { useNotifications } from '../../context/NotificationContext';
+import { useEvaluatorNotifications } from '../../context/EvaluatorNotificationContext';
 import { Search, User, LayoutGrid, FileText, FilePlus2, Users, History, Settings, LogOut, Menu, Bell, Eye, CheckCircle, Trash2 } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import { useState } from 'react';
@@ -17,7 +17,7 @@ export default function EvaluatorNavbar() {
         markAsRead, 
         deleteNotification,
         refreshNotifications 
-    } = useNotifications();
+    } = useEvaluatorNotifications();
 
     const displayName = firstName ? `${firstName} ${lastName}` : session?.user?.email;
     const [showNotificationPopup, setShowNotificationPopup] = useState(false);

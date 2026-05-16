@@ -2,29 +2,21 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { UserAuth } from './AuthContext';
 
-const NotificationContext = createContext();
+const ResearcherNotificationContext = createContext();
 
-export const useNotifications = () => {
-    const context = useContext(NotificationContext);
+export const useResearcherNotifications = () => {
+    const context = useContext(ResearcherNotificationContext);
     if (!context) {
-        throw new Error('useNotifications must be used within NotificationProvider');
+        throw new Error('useResearcherNotifications must be used within ResearcherNotificationProvider');
     }
     return context;
 };
 
-export const NotificationProvider = ({ children }) => {
-    const { session, userRole } = UserAuth();
+export const ResearcherNotificationProvider = ({ children }) => {
+    const { session } = UserAuth();
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(true);
-
-    // Determine which table to use based on role
-    const getTable = () => {
-        const role = userRole?.toLowerCase();
-        if (role === 'evaluator') return 'evaluator_notifications';
-        if (role === 'researcher') return 'researcher_notifications';
-        return null;
-    };
 
     const fetchNotifications = async () => {
         if (!session?.user?.id) {
@@ -34,18 +26,27 @@ export const NotificationProvider = ({ children }) => {
             return;
         }
 
-        const table = getTable();
-        if (!table) {
-            setNotifications([]);
-            setUnreadCount(0);
-            setLoading(false);
-            return;
-        }
-
         try {
             setLoading(true);
+            
+            // Check if user is a researcher first
+            const { data: researcherData } = await supabase
+                .from('Researcher')
+                .select('researcher_id')
+                .eq('user_id', session.user.id)
+                .maybeSingle();
+
+            // If not a researcher, don't fetch
+            if (!researcherData) {
+                console.log('User is not a researcher, skipping researcher notifications');
+                setNotifications([]);
+                setUnreadCount(0);
+                setLoading(false);
+                return;
+            }
+
             const { data, error } = await supabase
-                .from(table)
+                .from('researcher_notifications')
                 .select(`
                     *,
                     Research ( title, research_files ( file_type ) )
@@ -55,9 +56,9 @@ export const NotificationProvider = ({ children }) => {
                 .order('created_at', { ascending: false });
 
             if (error) {
-                console.error('Error fetching notifications:', error);
+                console.error('Error fetching researcher notifications:', error);
             } else {
-                console.log(`Fetched ${table}:`, data);
+                console.log('Fetched researcher notifications:', data);
                 setNotifications(data || []);
                 setUnreadCount(data?.filter(n => !n.is_read).length || 0);
             }
@@ -69,12 +70,9 @@ export const NotificationProvider = ({ children }) => {
     };
 
     const markAsRead = async (notificationId) => {
-        console.log('markAsRead called with ID:', notificationId);
         if (!session?.user?.id) return;
 
-        const table = getTable();
-        if (!table) return;
-
+        // Optimistic update
         setNotifications(prev => prev.map(n =>
             n.notification_id === notificationId ? { ...n, is_read: true } : n
         ));
@@ -84,12 +82,13 @@ export const NotificationProvider = ({ children }) => {
 
         try {
             const { error } = await supabase
-                .from(table)
+                .from('researcher_notifications')
                 .update({ is_read: true })
                 .eq('notification_id', notificationId);
 
             if (error) {
                 console.error('Error marking as read:', error);
+                // Rollback
                 setNotifications(prev => prev.map(n =>
                     n.notification_id === notificationId ? { ...n, is_read: false } : n
                 ));
@@ -101,11 +100,7 @@ export const NotificationProvider = ({ children }) => {
     };
 
     const markAllAsRead = async () => {
-        console.log('markAllAsRead called');
         if (!session?.user?.id) return;
-
-        const table = getTable();
-        if (!table) return;
 
         const unreadNotifications = notifications.filter(n => !n.is_read);
         if (unreadNotifications.length === 0) return;
@@ -113,18 +108,16 @@ export const NotificationProvider = ({ children }) => {
         const notificationIds = unreadNotifications.map(n => n.notification_id);
 
         try {
-            const { data, error } = await supabase
-                .from(table)
+            const { error } = await supabase
+                .from('researcher_notifications')
                 .update({ is_read: true })
-                .in('notification_id', notificationIds)
-                .select();
+                .in('notification_id', notificationIds);
 
             if (error) {
                 console.error('Error marking all as read:', error);
                 return;
             }
 
-            console.log('All marked as read successfully:', data);
             setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
             setUnreadCount(0);
         } catch (err) {
@@ -133,33 +126,31 @@ export const NotificationProvider = ({ children }) => {
     };
 
     const deleteNotification = async (notificationId) => {
-        console.log('deleteNotification called with ID:', notificationId);
         if (!session?.user?.id) return;
 
-        const table = getTable();
-        if (!table) return;
-
         const deletedNotif = notifications.find(n => n.notification_id === notificationId);
+        
+        // Optimistic update
         setNotifications(prev => prev.filter(n => n.notification_id !== notificationId));
         if (deletedNotif && !deletedNotif.is_read) setUnreadCount(prev => Math.max(0, prev - 1));
 
         try {
             const { error } = await supabase
-                .from(table)
+                .from('researcher_notifications')
                 .update({ is_deleted: true })
                 .eq('notification_id', notificationId);
 
             if (error) {
                 console.error('Error deleting notification:', error);
+                // Rollback
                 if (deletedNotif) {
                     setNotifications(prev => [deletedNotif, ...prev]);
                     if (!deletedNotif.is_read) setUnreadCount(prev => prev + 1);
                 }
-            } else {
-                console.log('Notification marked as deleted successfully');
             }
         } catch (err) {
             console.error('Error in deleteNotification:', err);
+            // Rollback
             if (deletedNotif) {
                 setNotifications(prev => [deletedNotif, ...prev]);
                 if (!deletedNotif.is_read) setUnreadCount(prev => prev + 1);
@@ -178,46 +169,65 @@ export const NotificationProvider = ({ children }) => {
     useEffect(() => {
         clearNotifications();
 
-        if (!session?.user?.id || !userRole) return;
+        if (!session?.user?.id) return;
 
-        const table = getTable();
-        if (!table) return;
+        // Only set up if user is a researcher
+        const setupResearcherNotifications = async () => {
+            const { data: researcherData } = await supabase
+                .from('Researcher')
+                .select('researcher_id')
+                .eq('user_id', session.user.id)
+                .maybeSingle();
 
-        fetchNotifications();
+            if (!researcherData) {
+                console.log('Not a researcher, skipping notification setup');
+                setLoading(false);
+                return;
+            }
 
-        const channel = supabase
-            .channel(`notifications-${session.user.id}`)
-            .on('postgres_changes', {
-                event: 'INSERT',
-                schema: 'public',
-                table: table,
-                filter: `recipient_id=eq.${session.user.id}`
-            }, (payload) => {
-                console.log('New notification inserted:', payload.new);
-                setNotifications(prev => [payload.new, ...prev]);
-                if (!payload.new.is_read) setUnreadCount(prev => prev + 1);
-            })
-            .on('postgres_changes', {
-                event: 'UPDATE',
-                schema: 'public',
-                table: table,
-                filter: `recipient_id=eq.${session.user.id}`
-            }, (payload) => {
-                console.log('Notification updated:', payload.new);
-                if (payload.new.is_deleted) {
-                    setNotifications(prev => prev.filter(n => n.notification_id !== payload.new.notification_id));
-                } else {
-                    setNotifications(prev => prev.map(n =>
-                        n.notification_id === payload.new.notification_id ? payload.new : n
-                    ));
-                }
-            })
-            .subscribe();
+            console.log('✅ Setting up researcher notifications for user:', session.user.id);
+            fetchNotifications();
 
-        return () => {
-            supabase.removeChannel(channel);
+            // Set up real-time listener
+            const channel = supabase
+                .channel('researcher-notifications')
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'researcher_notifications',
+                    filter: `recipient_id=eq.${session.user.id}`
+                }, (payload) => {
+                    console.log('🔔 New researcher notification:', payload.new);
+                    setNotifications(prev => [payload.new, ...prev]);
+                    if (!payload.new.is_read) setUnreadCount(prev => prev + 1);
+                })
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'researcher_notifications',
+                    filter: `recipient_id=eq.${session.user.id}`
+                }, (payload) => {
+                    console.log('🔄 Researcher notification updated:', payload.new);
+                    if (payload.new.is_deleted) {
+                        setNotifications(prev => prev.filter(n => n.notification_id !== payload.new.notification_id));
+                    } else {
+                        setNotifications(prev => prev.map(n =>
+                            n.notification_id === payload.new.notification_id ? payload.new : n
+                        ));
+                    }
+                })
+                .subscribe((status) => {
+                    console.log('📡 Researcher notification channel status:', status);
+                });
+
+            return () => {
+                console.log('🧹 Cleaning up researcher notification channel');
+                supabase.removeChannel(channel);
+            };
         };
-    }, [session?.user?.id, userRole]);
+
+        setupResearcherNotifications();
+    }, [session?.user?.id]);
 
     const value = {
         notifications,
@@ -231,8 +241,8 @@ export const NotificationProvider = ({ children }) => {
     };
 
     return (
-        <NotificationContext.Provider value={value}>
+        <ResearcherNotificationContext.Provider value={value}>
             {children}
-        </NotificationContext.Provider>
+        </ResearcherNotificationContext.Provider>
     );
 };

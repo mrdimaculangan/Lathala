@@ -1,16 +1,21 @@
 import { supabase } from '../supabaseClient';
 import { LogOut } from 'lucide-react';
-import { useNotifications } from '../context/NotificationContext';
+import { useEvaluatorNotifications } from '../context/EvaluatorNotificationContext';
+import { useResearcherNotifications } from '../context/ResearcherNotificationContext';
 import { useNavigate } from 'react-router-dom';
 
 export default function Logout() {
     const navigate = useNavigate();
-    const { clearNotifications } = useNotifications(); // Add this
+    
+    // ✅ FIX: Use the hooks properly - they're hooks, not components
+    const { clearNotifications: clearEvaluatorNotifications } = useEvaluatorNotifications();
+    const { clearNotifications: clearResearcherNotifications } = useResearcherNotifications();
 
     const handleLogout = async () => {
         try {
-            // Clear notifications first (optional but good for clean state)
-            clearNotifications();
+            // Clear both notification types
+            clearEvaluatorNotifications();
+            clearResearcherNotifications();
             
             // Tell Supabase to end the session
             const { error } = await supabase.auth.signOut();

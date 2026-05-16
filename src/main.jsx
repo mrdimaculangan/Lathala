@@ -4,15 +4,18 @@ import './index.css'
 import { RouterProvider } from 'react-router-dom';
 import { router } from './router.jsx';
 import { AuthContextProvider } from "./context/AuthContext.jsx";
-import { NotificationProvider } from "./context/NotificationContext.jsx"; // Fixed: comma to period
+import { EvaluatorNotificationProvider } from './context/EvaluatorNotificationContext';
+import { ResearcherNotificationProvider } from './context/ResearcherNotificationContext';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <>
       <AuthContextProvider>
-        <NotificationProvider>
-          <RouterProvider router={router} />
-        </NotificationProvider>
+        <EvaluatorNotificationProvider>
+          <ResearcherNotificationProvider>
+            <RouterProvider router={router} />
+          </ResearcherNotificationProvider>
+        </EvaluatorNotificationProvider>
       </AuthContextProvider>
     </>
   </StrictMode>,

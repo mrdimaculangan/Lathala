@@ -100,7 +100,7 @@ export default function EvaluatorNavbar() {
                             </NavLink>
                         </li>
                         <li>
-                            <NavLink to="/review-queue" className='sidebar-link'>
+                            <NavLink to="/evaluator-review-queue" className={({ isActive }) => isActive ? 'sidebar-link active' : 'sidebar-link'}>
                                 <FilePlus2 size={22} className='sidebar-icon' />
                                 <span className='sidebar-text'>Review Queue</span>
                             </NavLink>

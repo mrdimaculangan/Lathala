@@ -10,6 +10,7 @@ import ErrorPage from "./components/ErrorPage.jsx";
 import EvaluateResearch from "./components/Evaluator/EvaluateResearch.jsx";
 import EvaluatorActivityLog from "./components/Evaluator/EvaluatorActivityLog.jsx";
 import ResearcherActivityLog from "./components/Researcher/ResearcherActivityLog.jsx";
+import EvaluatorReviewQueue from "./components/Evaluator/EvaluatorReviewQueue.jsx";
 import UserProfile from "./components/Researcher/UserProfile.jsx";
 import EvaluatorUserProfile from "./components/Evaluator/UserProfile.jsx";
 import AdminMasterInventory from "./components/Admin/AdminMasterInventory.jsx";
@@ -93,10 +94,26 @@ export const router = createBrowserRouter([
         )
     },
     {
-        path: "/evaluator-activity-log/:logId",  // ← ADD THIS ROUTE
+        path: "/evaluator-activity-log/:logId", 
         element: (
             <ProtectedRoute allowedRoles={['Evaluator']}>
                 <EvaluatorActivityLog />
+            </ProtectedRoute>
+        )
+    },
+    {
+        path: "/evaluator-review-queue",
+        element: (
+            <ProtectedRoute allowedRoles={['Evaluator']}>
+                <EvaluatorReviewQueue />
+            </ProtectedRoute>
+        )
+    },
+    {
+        path: "/evaluator-review-queue/:logId",
+        element: (
+            <ProtectedRoute allowedRoles={['Evaluator']}>
+                <EvaluatorReviewQueue />
             </ProtectedRoute>
         )
     },

@@ -152,10 +152,11 @@ function EvaluatorDashboard() {
 
             if (revisionsError) {
                 console.error('Error fetching revisions:', revisionsError);
+                setRevisions([]);
                 return;
             }
 
-            // Format the revisions data
+            // Format the revisions data - ensure it's always an array
             const formatted = (revisionsData || []).map(revision => ({
                 ...revision,
                 research_title: revision.Research?.title,
@@ -169,9 +170,10 @@ function EvaluatorDashboard() {
                 revision_type_display: revision.revision_type === 'minor' ? 'Minor Revision' : 'Major Revision'
             }));
 
-            setRevisions(formatted);
+            setRevisions(formatted || []);
         } catch (err) {
             console.error('Error loading revised submissions:', err);
+            setRevisions([]);  
         }
     }
 
@@ -256,8 +258,8 @@ function EvaluatorDashboard() {
 
     // Stat counts
     const pendingSubmissions = researches.filter(r => r.status?.toLowerCase() === 'pending');
-    const pendingRevisions = revisions.length;
-    const totalPending = pendingSubmissions.length + pendingRevisions.length;
+    const pendingRevisions = revisions?.length || 0;  // Add fallback for undefined/null
+    const totalPending = (pendingSubmissions?.length || 0) + (pendingRevisions || 0);
 
     // Calendar
     const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();

@@ -24,7 +24,8 @@ const DECISION_ICONS = {
 export default function EvaluatorActivityLog() {
     const navigate = useNavigate();
     const { logId } = useParams();
-    const { dbId, session } = UserAuth();
+    const { session, firstName, lastName, userRole } = UserAuth();
+    const authUserId = session?.user?.id;  // this is the UUID that matches Evaluator.user_id
 
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -33,11 +34,35 @@ export default function EvaluatorActivityLog() {
     const [selectedLog, setSelectedLog] = useState(null);
     const [evaluatorInfo, setEvaluatorInfo] = useState(null);
 
-    useEffect(() => {
-        const currentUserId = dbId || session?.user?.id;
+    // REVISIONS PART
+    const [pendingRevisions, setPendingRevisions] = useState([]);
+    const [loadingRevisions, setLoadingRevisions] = useState(false);
 
-        if (!currentUserId) {
-            setLoading(false);
+    // para magpakita yung may revisions too 'pending' na lang rin pls lang idgaf anymore tbh
+    useEffect(() => {
+        if (!selectedLog) {
+            setPendingRevisions([]);
+            return;
+        }
+
+        async function fetchRevisions() {
+            setLoadingRevisions(true);
+            const { data } = await supabase
+                .from('ResearchRevisions')
+                .select('*')
+                .eq('research_id', selectedLog.research_id)
+                .order('submitted_at', { ascending: false });
+
+            setPendingRevisions(data || []);
+            setLoadingRevisions(false);
+        }
+
+        fetchRevisions();
+    }, [selectedLog]);
+
+    useEffect(() => {
+        if (!authUserId) {
+            console.log("No authuser found, waiting for auth...");
             return;
         }
 
@@ -45,17 +70,19 @@ export default function EvaluatorActivityLog() {
             try {
                 setLoading(true);
                 setError(null);
-
-                // 1. Get evaluator profile
+                
+                // Get evaluator_id from logged in user
+                console.log("Step 1: Fetching evaluator record for user_id:", authUserId);
                 const { data: evaluatorData, error: evaluatorError } = await supabase
                     .from('Evaluator')
                     .select('evaluator_id')
-                    .eq('user_id', currentUserId)
-                    .maybeSingle();
+                    .eq('user_id', authUserId)
+                    .single();
 
                 if (evaluatorError) throw new Error(`Evaluator Profile Error: ${evaluatorError.message}`);
                 if (!evaluatorData) {
-                    setError("No evaluator profile found. Please contact an administrator.");
+                    console.log("No evaluator record found for user_id:", authUserId);
+                    setError("No evaluator profile found. Please contact administrator.");
                     setLoading(false);
                     return;
                 }
@@ -68,26 +95,39 @@ export default function EvaluatorActivityLog() {
                     .select(`
                         evaluation_id,
                         research_id,
-                        sci_rigor,
-                        relevant_to_hru_obj,
-                        ethical_compliance,
-                        methodology,
+                        evaluator_id,
+                        overall_recommendation,
+                        additional_comments,
                         strengths,
                         weaknesses,
-                        additional_comments,
-                        overall_recommendation,
-                        evaluator_name,
-                        evaluator_email,
+                        methodology,
+                        sci_rigor,
+                        ethical_compliance,
+                        relevant_to_hru_obj,
                         evaluated_at,
-                        evaluator_id
+                        Research (
+                            research_id,
+                            title,
+                            hru_no,
+                            description,
+                            status,
+                            researcher_id,
+                            Researcher:researcher_id (
+                                researcher_id,
+                                user_id,
+                                Users:user_id (
+                                    first_name,
+                                    last_name,
+                                    email
+                                )
+                            )
+                        )
                     `)
                     .eq('evaluator_id', evaluatorData.evaluator_id)
                     .order('evaluated_at', { ascending: false });
 
-                if (evaluationError) {
-                    console.error("Supabase Query Error:", evaluationError);
-                    throw new Error(`Failed to fetch evaluations: ${evaluationError.message}`);
-                }
+                console.log("Raw evaluation data:", evaluationData);
+                console.log("Number of evaluations found:", evaluationData?.length || 0);
 
                 if (!evaluationData || evaluationData.length === 0) {
                     setLogs([]);
@@ -125,38 +165,29 @@ export default function EvaluatorActivityLog() {
 
                 // 4. Combine all the data
                 const formattedLogs = evaluationData.map(evaluation => {
-                    const research = researchData?.find(r => r.research_id === evaluation.research_id);
-                    
-                    // Access researcher name from nested structure
-                    const researcherName = research?.Researcher?.Users 
-                        ? `${research.Researcher.Users.first_name || ''} ${research.Researcher.Users.last_name || ''}`.trim()
-                        : 'Unknown Researcher';
-                    
-                    const researcherEmail = research?.Researcher?.Users?.email || 'No email provided';
+                    const researcher = evaluation.Research?.Researcher;
+                    const user = researcher?.Users;
 
                     return {
-                        log_id: evaluation.evaluation_id,
-                        research_id: evaluation.research_id,
-                        // Keep scores for the modal
-                        sci_rigor: evaluation.sci_rigor,
-                        relevant_to_hru_obj: evaluation.relevant_to_hru_obj,
-                        ethical_compliance: evaluation.ethical_compliance,
-                        methodology: evaluation.methodology,
-                        strengths: evaluation.strengths,
-                        weaknesses: evaluation.weaknesses,
-                        additional_comments: evaluation.additional_comments,
-                        overall_recommendation: evaluation.overall_recommendation,
-                        evaluator_name: evaluation.evaluator_name,
-                        evaluator_email: evaluation.evaluator_email,
-                        evaluated_at: evaluation.evaluated_at,
+                        log_id:           evaluation.evaluation_id,
+                        research_id:      evaluation.research_id,
+                        decision:         evaluation.overall_recommendation, // ← was: evaluation.decision
+                        comments:         evaluation.additional_comments,    // ← was: evaluation.comments
+                        strengths:        evaluation.strengths,
+                        weaknesses:       evaluation.weaknesses,
+                        methodology:      evaluation.methodology,
+                        sci_rigor:        evaluation.sci_rigor,
+                        evaluated_at:     evaluation.evaluated_at,
+                        created_at:       evaluation.evaluated_at,
                         Research: {
-                            research_id: research?.research_id,
-                            title: research?.title || "Untitled Research",
-                            hru_no: research?.hru_no,
-                            status: research?.status || "Pending",
+                            research_id: evaluation.Research?.research_id,
+                            title:       evaluation.Research?.title,
+                            hru_no:      evaluation.Research?.hru_no,
+                            abstract:    evaluation.Research?.description,
+                            status:      evaluation.Research?.status,
                             researcher: {
-                                name: researcherName,
-                                email: researcherEmail
+                                name:  user ? `${user.first_name} ${user.last_name}`.trim() : 'Unknown',
+                                email: user?.email || 'No email'
                             }
                         }
                     };
@@ -179,7 +210,7 @@ export default function EvaluatorActivityLog() {
         }
 
         fetchEvaluatorAndLogs();
-    }, [dbId, session, logId]);
+    }, [authUserId, logId]);
 
     // Filter logs based on search
     const filteredLogs = logs.filter(log =>
@@ -191,6 +222,7 @@ export default function EvaluatorActivityLog() {
 
     const closeModal = () => {
         setSelectedLog(null);
+        setPendingRevisions([]);
         navigate('/evaluator-activity-log', { replace: true });
     };
 
@@ -452,6 +484,125 @@ export default function EvaluatorActivityLog() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Evaluator's Comments */}
+                            {/* Evaluator's Full Evaluation */}
+                            <div className="detail-section">
+                                <h3>Your Evaluation</h3>
+                                <div className="detail-grid" style={{ marginBottom: '1rem' }}>
+                                    <div className="detail-item">
+                                        <label>Scientific Rigor</label>
+                                        <p>{selectedLog.sci_rigor ?? 'N/A'} / 5</p>
+                                    </div>
+                                    <div className="detail-item">
+                                        <label>Ethical Compliance</label>
+                                        <p>{selectedLog.ethical_compliance ?? 'N/A'} / 5</p>
+                                    </div>
+                                    <div className="detail-item">
+                                        <label>Relevance to HRU</label>
+                                        <p>{selectedLog.relevant_to_hru_obj ?? selectedLog.sci_rigor ?? 'N/A'} / 5</p>
+                                    </div>
+                                </div>
+                                {selectedLog.strengths && (
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <label style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>Strengths</label>
+                                        <div className="evaluator-notes-box">{selectedLog.strengths}</div>
+                                    </div>
+                                )}
+                                {selectedLog.weaknesses && (
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <label style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>Weaknesses</label>
+                                        <div className="evaluator-notes-box">{selectedLog.weaknesses}</div>
+                                    </div>
+                                )}
+                                {selectedLog.methodology && (
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <label style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>Methodology Notes</label>
+                                        <div className="evaluator-notes-box">{selectedLog.methodology}</div>
+                                    </div>
+                                )}
+                                {selectedLog.comments && (
+                                    <div>
+                                        <label style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>Additional Comments</label>
+                                        <div className="evaluator-notes-box">{selectedLog.comments}</div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Revision Submissions from Researcher */}
+                            {pendingRevisions.length > 0 && (
+                                <div className="detail-section">
+                                    <h3>Researcher Revision Submissions</h3>
+                                    {loadingRevisions ? (
+                                        <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>Loading...</p>
+                                    ) : (
+                                        <div className="revision-history-list">
+                                            {pendingRevisions.map((rev, i) => (
+                                                <div key={rev.revision_id} className="revision-history-item">
+                                                    <div className="revision-history-header">
+                                                        <span className="revision-history-label">
+                                                            Submission #{pendingRevisions.length - i}
+                                                            <span className="revision-type-tag">
+                                                                {rev.revision_type === 'minor' ? 'Minor' : 'Major'}
+                                                            </span>
+                                                            {i === 0 && (
+                                                                <span style={{
+                                                                    fontSize: '0.65rem', background: '#fef9c3',
+                                                                    color: '#854d0e', padding: '2px 8px',
+                                                                    borderRadius: '999px', fontWeight: 700
+                                                                }}>
+                                                                    LATEST
+                                                                </span>
+                                                            )}
+                                                        </span>
+                                                                                    <span className="revision-history-date">
+                                                            {new Date(rev.submitted_at).toLocaleDateString('en-US', {
+                                                                month: 'short', day: 'numeric', year: 'numeric'
+                                                            })}
+                                                        </span>
+                                                    </div>
+                                                    {rev.researcher_comment && (
+                                                        <p className="revision-history-comment">
+                                                            <strong>Researcher's note:</strong> {rev.researcher_comment}
+                                                        </p>
+                                                    )}
+                                                 <a
+                                                    href={rev.new_file_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="revision-history-file"
+                                                    >
+                                                    <FileText size={14} />
+                                                    View revised file
+                                                </a>
+                                                </div>
+                                                ))}
+                                        </div>
+                                    )}
+
+                                    {/* Button to go evaluate the resubmission */}
+                                    <button
+                                        style={{
+                                            marginTop: '1rem',
+                                            width: '100%',
+                                            padding: '12px',
+                                            background: '#031640',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            fontWeight: 600,
+                                            fontSize: '0.9rem',
+                                            cursor: 'pointer'
+                                        }}
+                                        onClick={() => {
+                                            closeModal();
+                                            navigate(`/evaluate-research/${selectedLog.research_id}`);
+                                        }}
+                                    >
+                                        Evaluate Resubmission →
+                                    </button>
+                                </div>
+                                )}
                         </div>
                     </div>
                 </div>

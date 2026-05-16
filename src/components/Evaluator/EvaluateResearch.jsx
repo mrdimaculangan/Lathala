@@ -380,6 +380,21 @@ function EvaluateResearch() {
                         message: `Your research "${research.title}" has been evaluated by ${evaluatorInfo.name}. Status: ${newStatus}.`,
                     }]);
             }
+            // Update the latest ResearchRevisions row status to match decision
+            const { data: latestRevision } = await supabase
+                .from('ResearchRevisions')
+                .select('revision_id')
+                .eq('research_id', Number(researchId))
+                .order('submitted_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (latestRevision) {
+                await supabase
+                    .from('ResearchRevisions')
+                    .update({ status: newStatus })
+                    .eq('revision_id', latestRevision.revision_id);
+            }
 
             alert('Evaluation submitted successfully.');
             navigate('/evaluator-dashboard');

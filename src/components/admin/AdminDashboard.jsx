@@ -45,19 +45,20 @@ export default function AdminDashboard() {
             const queue = queueRes.data || [];
             const evaluations = evaluationsRes.data || [];
 
-            // 1. Identify Evaluated IDs and Queue IDs
-            const evaluatedIds = new Set(evaluations.map(e => e.research_id));
-            const inQueueIds = new Set(queue.map(q => q.research_id));
+            // 1. Identify Unique Evaluated IDs
+            const evaluatedIds = new Set(evaluations.map(e => Number(e.research_id)));
 
-            // 2. FIND THE UNASSIGNED ONES (The "Missing 3")
+            // 2. Identify Unique Queue IDs
+            const inQueueIds = new Set(queue.map(q => Number(q.research_id)));
+
+            // 3. FIX: Filter the Queue to only show papers NOT YET evaluated
+            // This prevents the "Double Counting" you saw in your screenshot
+            const trulyPendingInQueue = queue.filter(q => !evaluatedIds.has(Number(q.research_id)));
+
+            // 4. FIND THE UNASSIGNED ONES (Not Evaluated AND Not in Queue)
             const unassignedPapers = allResearch.filter(r =>
-                !evaluatedIds.has(r.research_id) && !inQueueIds.has(r.research_id)
+                !evaluatedIds.has(Number(r.research_id)) && !inQueueIds.has(Number(r.research_id))
             );
-
-            console.group("UNASSIGNED RESEARCH DETECTED");
-            console.log("Count:", unassignedPapers.length);
-            console.table(unassignedPapers.map(p => ({ HRU: p.hru_no, Title: p.title })));
-            console.groupEnd();
 
             const normalize = (val) => val?.toLowerCase().replace(' ', '_') || '';
 
@@ -72,7 +73,7 @@ export default function AdminDashboard() {
                 totalUsers: users.length,
                 activeUsers: users.filter(u => !u.deleted_at).length,
                 totalResearch: allResearch.length,
-                pendingQueue: queue.length,
+                pendingQueue: trulyPendingInQueue.length, // Updated to only show active tasks
                 evaluatedResearch: evaluatedIds.size,
                 approvedResearch: approvedCount,
                 rejectedResearch: rejectedCount,
@@ -80,7 +81,6 @@ export default function AdminDashboard() {
                 unassignedResearch: unassignedPapers.length
             });
 
-            // Keep only latest 5 for the "Recent" list
             setRecentResearch(allResearch.sort((a, b) =>
                 new Date(b.registration_date) - new Date(a.registration_date)).slice(0, 5)
             );

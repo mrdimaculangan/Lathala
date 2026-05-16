@@ -356,7 +356,7 @@
     font-size: 14px;
 }
 
-/* ── Assign button color ── */
+/* Assign button color */
 .assign-btn {
     color: #7c3aed;
 }
@@ -365,7 +365,7 @@
     background: #f5f3ff;
 }
 
-/* ── Assign Modal ── */
+/* Assign Modal */
 .assign-modal {
     max-width: 520px;
     width: 100%;
@@ -389,7 +389,7 @@
     font-weight: 500;
 }
 
-/* ── Evaluator Checklist ── */
+/* Evaluator Checklist */
 .evaluator-list {
     display: flex;
     flex-direction: column;

@@ -58,7 +58,6 @@ export default function AdminMasterInventory() {
     async function loadMasterData() {
         setLoading(true);
         try {
-            // Step 1: Get all Evaluation_Research entries
             const { data: evaluationsData, error: evalError } = await supabase
                 .from('Evaluation_Research')
                 .select('*')
@@ -72,10 +71,8 @@ export default function AdminMasterInventory() {
                 return;
             }
 
-            // Step 2: Get unique research IDs
             const researchIds = [...new Set(evaluationsData.map(er => er.research_id))];
 
-            // Step 3: Get research details with author info
             const { data: researchData, error: researchError } = await supabase
                 .from('Research')
                 .select(`
@@ -89,7 +86,6 @@ export default function AdminMasterInventory() {
 
             if (researchError) throw researchError;
 
-            // Step 4: Get all researcher user details
             const researcherIds = researchData.map(r => r.Researcher?.user_id).filter(id => id);
             let researcherUsersMap = {};
 
@@ -107,7 +103,6 @@ export default function AdminMasterInventory() {
                 }
             }
 
-            // Step 5: Get all evaluator details
             const evaluatorIds = [...new Set(evaluationsData.map(er => er.evaluator_id).filter(id => id))];
             let evaluatorUsersMap = {};
 
@@ -142,7 +137,6 @@ export default function AdminMasterInventory() {
                 }
             }
 
-            // Step 6: Group evaluations by research_id
             const evaluationsByResearch = {};
             evaluationsData.forEach(evaluation => {
                 if (!evaluationsByResearch[evaluation.research_id]) {
@@ -176,7 +170,6 @@ export default function AdminMasterInventory() {
                 });
             });
 
-            // Step 7: Combine research with evaluations
             const processedResearches = (researchData || []).map(research => {
                 const evaluations = evaluationsByResearch[research.research_id] || [];
 

@@ -45,17 +45,12 @@ export default function AdminDashboard() {
             const queue = queueRes.data || [];
             const evaluations = evaluationsRes.data || [];
 
-            // 1. Identify Unique Evaluated IDs
             const evaluatedIds = new Set(evaluations.map(e => Number(e.research_id)));
 
-            // 2. Identify Unique Queue IDs
             const inQueueIds = new Set(queue.map(q => Number(q.research_id)));
 
-            // 3. FIX: Filter the Queue to only show papers NOT YET evaluated
-            // This prevents the "Double Counting" you saw in your screenshot
             const trulyPendingInQueue = queue.filter(q => !evaluatedIds.has(Number(q.research_id)));
 
-            // 4. FIND THE UNASSIGNED ONES (Not Evaluated AND Not in Queue)
             const unassignedPapers = allResearch.filter(r =>
                 !evaluatedIds.has(Number(r.research_id)) && !inQueueIds.has(Number(r.research_id))
             );

@@ -13,8 +13,8 @@ export default function AdminQueue() {
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [assignTarget, setAssignTarget] = useState(null);
     const [evaluators, setEvaluators] = useState([]);
-    const [selectedEvaluatorId, setSelectedEvaluatorId] = useState(null);  // single value
-    const [alreadyAssigned, setAlreadyAssigned] = useState(null);           // single object
+    const [selectedEvaluatorId, setSelectedEvaluatorId] = useState(null);
+    const [alreadyAssigned, setAlreadyAssigned] = useState(null);
     const [saving, setSaving] = useState(false);
 
     // Pagination and Filter states
@@ -51,7 +51,6 @@ export default function AdminQueue() {
         setCurrentPage(1);
     }, [searchTerm, filterStatus, researches]);
 
-    // Pagination derived data
     const totalPages = Math.ceil(filteredResearches.length / ITEMS_PER_PAGE);
     const paginatedResearches = filteredResearches.slice(
         (currentPage - 1) * ITEMS_PER_PAGE,
@@ -187,7 +186,6 @@ export default function AdminQueue() {
             }));
 
             setEvaluators(formattedEvaluators);
-            // Single evaluator — take the first assigned one if it exists
             const current = assignedData && assignedData.length > 0 ? assignedData[0] : null;
             setAlreadyAssigned(current);
             setSelectedEvaluatorId(current ? current.evaluator_id : null);
@@ -203,7 +201,7 @@ export default function AdminQueue() {
         const alreadyId = alreadyAssigned ? Number(alreadyAssigned.evaluator_id) : null;
 
         try {
-            // Remove old evaluator if changed
+
             if (alreadyId !== null && alreadyId !== currentSelection) {
                 const { error: deleteError } = await supabase
                     .from('Research_Queue')
@@ -214,7 +212,6 @@ export default function AdminQueue() {
                 if (deleteError) throw deleteError;
             }
 
-            // Insert new evaluator if changed
             if (currentSelection !== null && currentSelection !== alreadyId) {
                 const { error: insertError } = await supabase
                     .from('Research_Queue')
@@ -227,7 +224,6 @@ export default function AdminQueue() {
 
                 if (insertError) throw insertError;
 
-                // Send notification to newly assigned evaluator
                 await createAssignmentNotification(currentSelection);
             }
 
@@ -244,7 +240,6 @@ export default function AdminQueue() {
 
     const createAssignmentNotification = async (newEvaluatorId) => {
         try {
-            // Get the evaluator's user_id
             const { data: evaluatorData, error: evaluatorError } = await supabase
                 .from('Evaluator')
                 .select('evaluator_id, user_id')

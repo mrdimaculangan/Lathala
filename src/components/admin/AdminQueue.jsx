@@ -13,8 +13,8 @@ export default function AdminQueue() {
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [assignTarget, setAssignTarget] = useState(null);
     const [evaluators, setEvaluators] = useState([]);
-    const [selectedEvaluatorIds, setSelectedEvaluatorIds] = useState([]);
-    const [alreadyAssigned, setAlreadyAssigned] = useState([]);
+    const [selectedEvaluatorId, setSelectedEvaluatorId] = useState(null);
+    const [alreadyAssigned, setAlreadyAssigned] = useState(null);
     const [saving, setSaving] = useState(false);
 
     // Pagination and Filter states
@@ -209,8 +209,8 @@ export default function AdminQueue() {
             });
 
             setEvaluators(formattedEvaluators);
-            setAlreadyAssigned(assignedData || []);
-            setSelectedEvaluatorIds((assignedData || []).map(a => a.evaluator_id));
+            setAlreadyAssigned(assignedData && assignedData.length > 0 ? assignedData[0] : null);
+            setSelectedEvaluatorId(assignedData && assignedData.length > 0 ? assignedData[0].evaluator_id : null);
         } catch (err) {
             console.error('Error loading evaluators:', err);
             alert('Failed to load evaluators. Please try again.');
@@ -219,39 +219,38 @@ export default function AdminQueue() {
 
     const handleSaveAssignments = async () => {
         setSaving(true);
-        const currentSelection = selectedEvaluatorIds.map(id => Number(id));
-        const alreadyIds = alreadyAssigned.map(a => Number(a.evaluator_id));
-
-        const toAdd = currentSelection.filter(id => !alreadyIds.includes(id));
-        const toRemove = alreadyIds.filter(id => !currentSelection.includes(id));
+        const currentSelection = selectedEvaluatorId ? Number(selectedEvaluatorId) : null;
+        const alreadyId = alreadyAssigned ? Number(alreadyAssigned.evaluator_id) : null;
 
         try {
-            if (toAdd.length > 0) {
-                const newRows = toAdd.map(id => ({
-                    research_id: assignTarget.research_id,
-                    evaluator_id: id,
-                    assigned_at: new Date().toISOString(),
-                    status: 'Pending'
-                }));
-
-                const { error: insertError } = await supabase
-                    .from('Research_Queue')
-                    .insert(newRows);
-
-                if (insertError) throw insertError;
-            }
-
-            if (toRemove.length > 0) {
+            // If there's already an assigned evaluator and it's different from the new selection, remove it
+            if (alreadyId !== null && alreadyId !== currentSelection) {
                 const { error: deleteError } = await supabase
                     .from('Research_Queue')
                     .delete()
                     .eq('research_id', assignTarget.research_id)
-                    .in('evaluator_id', toRemove);
+                    .eq('evaluator_id', alreadyId);
 
                 if (deleteError) throw deleteError;
             }
 
-            alert(`Successfully updated evaluators for ${assignTarget.hru_no}`);
+            // If a new evaluator is selected, add it
+            if (currentSelection !== null && currentSelection !== alreadyId) {
+                const newRow = {
+                    research_id: assignTarget.research_id,
+                    evaluator_id: currentSelection,
+                    assigned_at: new Date().toISOString(),
+                    status: 'Pending'
+                };
+
+                const { error: insertError } = await supabase
+                    .from('Research_Queue')
+                    .insert(newRow);
+
+                if (insertError) throw insertError;
+            }
+
+            alert(`Successfully updated evaluator for ${assignTarget.hru_no}`);
             setIsAssignModalOpen(false);
             await loadQueueData();
         } catch (error) {
@@ -262,12 +261,8 @@ export default function AdminQueue() {
         }
     };
 
-    const toggleEvaluator = (evaluatorId) => {
-        setSelectedEvaluatorIds(prev =>
-            prev.includes(evaluatorId)
-                ? prev.filter(id => id !== evaluatorId)
-                : [...prev, evaluatorId]
-        );
+    const selectEvaluator = (evaluatorId) => {
+        setSelectedEvaluatorId(evaluatorId);
     };
 
     const renderPagination = () => {
@@ -399,7 +394,7 @@ export default function AdminQueue() {
                                             <button
                                                 className="icon-btn assign-btn"
                                                 onClick={() => handleAssignClick(research)}
-                                                title="Assign Evaluators"
+                                                title="Assign Evaluator"
                                             >
                                                 <UserPlus size={18} />
                                             </button>
@@ -421,15 +416,15 @@ export default function AdminQueue() {
                     </div>
                 )}
 
-                {/* Assign Evaluators Modal */}
+                {/* Assign Evaluator Modal */}
                 {isAssignModalOpen && assignTarget && (
                     <div className="modal-overlay" onClick={() => !saving && setIsAssignModalOpen(false)}>
                         <div className="admin-modal assign-modal" onClick={(e) => e.stopPropagation()}>
                             <div className="modal-header">
                                 <div>
                                     <div className="hru-tag">{assignTarget.hru_no}</div>
-                                    <h2>Assign Evaluators</h2>
-                                    <p className="assign-subtitle">Select evaluators to review this research</p>
+                                    <h2>Assign Evaluator</h2>
+                                    <p className="assign-subtitle">Select an evaluator to review this research</p>
                                 </div>
                                 <button className="icon-btn close-modal-btn" onClick={() => !saving && setIsAssignModalOpen(false)}>
                                     <X size={20} />
@@ -459,25 +454,25 @@ export default function AdminQueue() {
                             </div>
 
                             <div className="detail-section">
-                                <h3>Select Evaluators</h3>
+                                <h3>Select Evaluator</h3>
                                 <div className="evaluator-list">
                                     {evaluators.map((ev) => {
-                                        const isChecked = selectedEvaluatorIds.includes(ev.evaluator_id);
-                                        const isAlreadyAssigned = alreadyAssigned.some(a => a.evaluator_id === ev.evaluator_id);
+                                        const isSelected = selectedEvaluatorId === ev.evaluator_id;
+                                        const isAlreadyAssigned = alreadyAssigned && alreadyAssigned.evaluator_id === ev.evaluator_id;
 
                                         return (
                                             <div
                                                 key={ev.evaluator_id}
-                                                className={`evaluator-item ${isChecked ? 'selected' : ''} ${isAlreadyAssigned && !isChecked ? 'already-in' : ''}`}
-                                                onClick={() => toggleEvaluator(ev.evaluator_id)}
+                                                className={`evaluator-item ${isSelected ? 'selected' : ''}`}
+                                                onClick={() => selectEvaluator(ev.evaluator_id)}
                                             >
-                                                <div className={`evaluator-checkbox ${isChecked ? 'checked' : ''}`}>
-                                                    {isChecked && <Check size={14} />}
+                                                <div className={`evaluator-radio ${isSelected ? 'checked' : ''}`}>
+                                                    {isSelected && <Check size={14} />}
                                                 </div>
                                                 <div className="evaluator-info">
                                                     <span className="evaluator-name">
                                                         {ev.name}
-                                                        {isAlreadyAssigned && !isChecked && (
+                                                        {isAlreadyAssigned && (
                                                             <span className="assigned-tag">Currently Assigned</span>
                                                         )}
                                                     </span>
@@ -489,7 +484,7 @@ export default function AdminQueue() {
                                 </div>
                                 <div className="assign-actions">
                                     <div className="selected-count">
-                                        {selectedEvaluatorIds.length} evaluator(s) selected
+                                        {selectedEvaluatorId ? "1 evaluator selected" : "No evaluator selected"}
                                     </div>
                                     <div className="assign-btns">
                                         <button
@@ -502,7 +497,7 @@ export default function AdminQueue() {
                                         <button
                                             className="save-assign-btn"
                                             onClick={handleSaveAssignments}
-                                            disabled={selectedEvaluatorIds.length === 0 || saving}
+                                            disabled={!selectedEvaluatorId || saving}
                                         >
                                             {saving ? 'Saving...' : 'Save to Queue'}
                                         </button>

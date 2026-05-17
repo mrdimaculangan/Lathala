@@ -399,3 +399,100 @@
         gap: 8px;
     }
 }
+
+/* Wrapper for file item and buttons */
+.file-item-wrapper {
+    margin-bottom: 12px;
+}
+
+/* File item - the outlined box */
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px 8px 0 0; /* Rounded only on top */
+    background: white;
+    transition: border-color 0.2s;
+}
+
+/* Add bottom border when buttons are present */
+.file-item-wrapper:has(.file-buttons) .file-item {
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+}
+
+.file-item:hover {
+    border-color: #cbd5e1;
+}
+
+.file-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-type {
+    display: block;
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+/* File action buttons - outside the outline, below the file item */
+.file-buttons {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-top: none;
+    border-radius: 0 0 8px 8px; /* Rounded only on bottom */
+    background: #f8fafc;
+}
+
+.file-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: white;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.file-action-btn:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.preview-btn:hover {
+    color: #2563eb;
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+
+.download-btn:hover {
+    color: #059669;
+    border-color: #059669;
+    background: #ecfdf5;
+}
+
+.file-action-btn:active {
+    transform: scale(0.98);
+}

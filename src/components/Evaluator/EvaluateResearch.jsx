@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { UserAuth } from "../../context/AuthContext";
 import { supabase } from "../../supabaseClient";
 import Navbar from "./EvaluatorNavbar";
-import { FileText } from "lucide-react";
+import { FileText, Eye, Download } from "lucide-react";
 import "./EvaluateResearch.css";
 
 function EvaluateResearch() {
@@ -480,33 +480,37 @@ function EvaluateResearch() {
                             </div>
                         </div>
 
-                        <div className="research-files-section">
+                       <div className="research-files-section">
                             <h3>Submitted Files</h3>
                             <div className="file-list">
                                 {research.research_files && research.research_files.length > 0 ? (
                                     research.research_files.map((file, index) => (
-                                        <div key={index} className="file-item">
-                                            <FileText size={18} />
-                                            <div className="file-details">
-                                                <span className="file-name">
-                                                    {getCleanFileName(file.file_url)}
-                                                </span>
-                                                <span className="file-type">{file.file_type}</span>
+                                        <div key={index} className="file-item-wrapper">
+                                            <div className="file-item">
+                                                <FileText size={18} />
+                                                <div className="file-details">
+                                                    <span className="file-name">
+                                                        {getCleanFileName(file.file_url)}
+                                                    </span>
+                                                    <span className="file-type">{file.file_type}</span>
+                                                </div>
                                             </div>
                                             <div className="file-buttons">
                                                 <button
-                                                    className="icon-btn"
+                                                    className="file-action-btn preview-btn"
                                                     onClick={() => window.open(file.file_url, '_blank')}
-                                                    title="Preview"
+                                                    title="Preview file"
                                                 >
-                                                    👁️
+                                                    <Eye size={16} />
+                                                    <span>Preview</span>
                                                 </button>
                                                 <button
-                                                    className="icon-btn"
+                                                    className="file-action-btn download-btn"
                                                     onClick={() => handleDownload(file.file_url, getCleanFileName(file.file_url))}
-                                                    title="Download"
+                                                    title="Download file"
                                                 >
-                                                    📥
+                                                    <Download size={16} />
+                                                    <span>Download</span>
                                                 </button>
                                             </div>
                                         </div>

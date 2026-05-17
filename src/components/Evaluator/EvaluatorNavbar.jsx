@@ -41,7 +41,7 @@ export default function EvaluatorNavbar() {
             await markAsRead(notif.notification_id);
         }
         setShowNotificationPopup(false);
-        navigate(`/evaluator-activity-log/${notif.log_id}`);
+        navigate(`/evaluator-review-queue/${notif.log_id}`);
     };
 
     const displayedNotifications = activeTab === 'unread'
@@ -175,7 +175,7 @@ export default function EvaluatorNavbar() {
                                             <div className="notification-details">
                                                 <p className="notification-message">
                                                     {notif.message || `A research paper requires your evaluation.`}{' '}
-                                                    <span className="notif-link">View in Activity Log →</span>
+                                                    <span className="notif-link">View in Review Queue →</span>
                                                 </p>
                                                 <span className="notification-time">
                                                     {new Date(notif.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}

@@ -532,3 +532,19 @@ body {
         justify-content: space-between;
     }
 }
+
+.view-log-btn {
+    padding: 8px 16px;
+    background: transparent;
+    color: #031640;
+    border: 1.5px solid #031640;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.view-log-btn:hover {
+    background: #031640;
+    color: white;
+}

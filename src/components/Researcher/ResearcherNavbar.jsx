@@ -58,10 +58,6 @@ export default function ResearcherNavbar() {
                             <figcaption><h3>Lathala</h3></figcaption>
                         </figure>
                     </Link>
-                    <div className='search-container'>
-                        <Search size={18} className="search-icon-inside" />
-                        <input type="text" placeholder='Search research, authors, etc...' />
-                    </div>
                 </section>
 
                 <section className='navbar-group-right'>

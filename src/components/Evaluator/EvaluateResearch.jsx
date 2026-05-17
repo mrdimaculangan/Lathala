@@ -172,65 +172,43 @@ function EvaluateResearch() {
 
     const fetchResearchDetails = async () => {
         try {
-            const { data: basicData, error: basicError } = await supabase
-                .from('Research')
-                .select('*')
-                .eq('research_id', researchId)
-                .single();
-
-            if (basicError) {
-                console.error('Error fetching basic research:', basicError);
-                setResearch(null);
-                setLoading(false);
-                return;
-            }
-
-            if (!basicData) {
-                console.log('❌ No research found with ID:', researchId);
-                setResearch(null);
-                setLoading(false);
-                return;
-            }
-
             const { data, error } = await supabase
                 .from('Research')
                 .select(`
-                    *,
-                    research_files ( 
-                        file_url, 
-                        file_type
-                    ),
-                    Researcher:researcher_id (
-                        researcher_id,
-                        user_id,
-                        Users!inner (
-                            first_name,
-                            last_name,
-                            email
-                        )
+                *,
+                research_files ( file_url, file_type ),
+                Researcher:researcher_id (
+                    researcher_id,
+                    user_id,
+                    Users:user_id (
+                        first_name,
+                        last_name,
+                        email
                     )
-                `)
+                )
+            `)
                 .eq('research_id', researchId)
                 .single();
 
-            if (error) {
-                console.error('Error fetching full research:', error);
-                setResearch(basicData);
+            if (error || !data) {
+                console.error('Error fetching research:', error);
+                // Fallback: just get the basic row so researcher_id is still available
+                const { data: basicData } = await supabase
+                    .from('Research')
+                    .select('*')
+                    .eq('research_id', researchId)
+                    .single();
+                setResearch(basicData || null);
                 setLoading(false);
                 return;
             }
 
-            if (data) {
-                const researcher = data.Researcher;
-                const users = researcher?.Users;
+            const researcher = data.Researcher;
+            const users = researcher?.Users;
+            data.author       = users ? `${users.first_name || ''} ${users.last_name || ''}`.trim() : 'Unknown Author';
+            data.author_email = users?.email || 'No email';
 
-                data.author = users
-                    ? `${users.first_name || ''} ${users.last_name || ''}`.trim()
-                    : 'Unknown Author';
-                data.author_email = users?.email || 'No email';
-            }
-
-            setResearch(data || basicData);
+            setResearch(data);
         } catch (error) {
             console.error("Error fetching research details:", error);
             setResearch(null);
@@ -345,41 +323,43 @@ function EvaluateResearch() {
                     actor_role: 'evaluator',
                     action: 'evaluated',
                     notes: notesText,
+                    status_snapshot: newStatus,
                 }])
                 .select()
                 .single();
 
             if (logError) throw logError;
+            console.log("logData:", logData);
+            console.log("logData.log_id:", logData?.log_id);
 
             const researcherAuthUUID = research.Researcher?.user_id;
 
-            if (!researcherAuthUUID) {
-                const { data: researcherData, error: researcherError } = await supabase
-                    .from('Researcher')
-                    .select('user_id')
-                    .eq('researcher_id', research.researcher_id)
-                    .single();
+            // Always fetch researcher UUID fresh — don't rely on join
+            const { data: researcherRow } = await supabase
+                .from('Researcher')
+                .select('user_id')
+                .eq('researcher_id', research.researcher_id)
+                .single();
 
-                if (researcherError || !researcherData) throw new Error("Could not find researcher to notify.");
+            const recipientUUID = researcherRow?.user_id;
 
-                await supabase
-                    .from('researcher_notifications')
-                    .insert([{
-                        recipient_id: researcherData.user_id,
-                        research_id: Number(researchId),
-                        log_id: logData.log_id,
-                        message: `Your research "${research.title}" has been evaluated by ${evaluatorInfo.name}. Status: ${newStatus}.`,
-                    }]);
+            if (!recipientUUID) {
+                console.error('Could not find researcher UUID for notification');
             } else {
-                await supabase
+                const { error: notifError } = await supabase
                     .from('researcher_notifications')
                     .insert([{
-                        recipient_id: researcherAuthUUID,
-                        research_id: Number(researchId),
-                        log_id: logData.log_id,
-                        message: `Your research "${research.title}" has been evaluated by ${evaluatorInfo.name}. Status: ${newStatus}.`,
+                        recipient_id: recipientUUID,
+                        research_id:  Number(researchId),
+                        log_id:       logData.log_id,
+                        message:      `Your research "${research.title}" has been evaluated. Status: ${newStatus}.`,
                     }]);
+
+                if (notifError) {
+                    console.error('Notification insert error:', notifError);
+                }
             }
+
             // Update the latest ResearchRevisions row status to match decision
             const { data: latestRevision } = await supabase
                 .from('ResearchRevisions')

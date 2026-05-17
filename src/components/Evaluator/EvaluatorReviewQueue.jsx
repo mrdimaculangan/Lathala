@@ -61,6 +61,7 @@ function EvaluatorReviewQueue() {
 
     async function loadOriginalSubmissions(evaluatorId) {
         try {
+            // Get research IDs from queue
             const { data: queueData, error: queueError } = await supabase
                 .from('Research_Queue')
                 .select('research_id')
@@ -73,6 +74,7 @@ function EvaluatorReviewQueue() {
 
             const assignedResearchIds = queueData.map(q => q.research_id);
 
+            // Fetch research data with researcher info and file attachments
             const { data: researchData, error: researchError } = await supabase
                 .from('Research')
                 .select(`
@@ -91,7 +93,10 @@ function EvaluatorReviewQueue() {
                 .in('research_id', assignedResearchIds)
                 .order('registration_date', { ascending: false });
 
-            if (researchError) return;
+            if (researchError) {
+                console.error('Error fetching research data:', researchError);
+                return;
+            }
 
             const formatted = (researchData || []).map(r => ({
                 ...r,
@@ -111,16 +116,26 @@ function EvaluatorReviewQueue() {
 
     async function loadRevisedSubmissions(evaluatorId) {
         try {
+            // Fetch revisions assigned to this evaluator that are still pending
+            // Similar to how ResearcherDashboard fetches revisions but filtered by evaluator
             const { data: revisionsData, error: revisionsError } = await supabase
                 .from('ResearchRevisions')
                 .select(`
-                    *,
+                    revision_id,
+                    research_id,
+                    revision_type,
+                    researcher_comment,
+                    new_file_url,
+                    submitted_at,
+                    status,
+                    evaluator_id,
                     Research:research_id (
                         research_id,
                         title,
                         hru_no,
                         description,
                         registration_date,
+                        status as research_status,
                         researcher_id,
                         Researcher:researcher_id (
                             researcher_id,
@@ -137,26 +152,46 @@ function EvaluatorReviewQueue() {
                 .eq('status', 'Pending')
                 .order('submitted_at', { ascending: false });
 
-            if (revisionsError) return;
+            if (revisionsError) {
+                console.error('Error fetching revisions:', revisionsError);
+                setRevisions([]);
+                return;
+            }
 
-            const formatted = (revisionsData || []).map(revision => ({
-                ...revision,
-                research_title: revision.Research?.title,
-                research_description: revision.Research?.description,
-                hru_no: revision.Research?.hru_no,
-                original_submission_date: revision.Research?.registration_date,
-                author: revision.Research?.Researcher?.Users 
-                    ? `${revision.Research.Researcher.Users.first_name || ''} ${revision.Research.Researcher.Users.last_name || ''}`.trim()
-                    : 'Unknown Author',
-                author_email: revision.Research?.Researcher?.Users?.email || 'No email',
-                revision_type_display: revision.revision_type === 'minor' ? 'Minor Revision' : 'Major Revision',
-                type: 'revision',
-                submitted_at: revision.submitted_at
-            }));
+            console.log('Fetched revisions:', revisionsData); // Debug log
+
+            const formatted = (revisionsData || []).map(revision => {
+                const research = revision.Research;
+                const researcher = research?.Researcher;
+                const user = researcher?.Users;
+                
+                return {
+                    revision_id: revision.revision_id,
+                    research_id: revision.research_id,
+                    revision_type: revision.revision_type,
+                    revision_type_display: revision.revision_type === 'minor' ? 'Minor Revision' : 'Major Revision',
+                    researcher_comment: revision.researcher_comment,
+                    new_file_url: revision.new_file_url,
+                    submitted_at: revision.submitted_at,
+                    status: revision.status,
+                    evaluator_id: revision.evaluator_id,
+                    research_title: research?.title || 'Untitled',
+                    research_description: research?.description || '',
+                    hru_no: research?.hru_no || '—',
+                    original_submission_date: research?.registration_date,
+                    research_status: research?.research_status,
+                    author: user 
+                        ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown Author'
+                        : 'Unknown Author',
+                    author_email: user?.email || 'No email',
+                    type: 'revision'
+                };
+            });
 
             setRevisions(formatted);
         } catch (err) {
             console.error('Error loading revisions:', err);
+            setRevisions([]);
         }
     }
 
@@ -170,7 +205,7 @@ function EvaluatorReviewQueue() {
             case 'rejected':
                 return { label: 'REJECTED', icon: <XCircle size={14} />, color: '#991b1b', bg: '#fee2e2' };
             default:
-                return { label: 'PENDING', icon: <Clock size={14} />, color: '#854d0e', bg: '#fef9c3' };
+                return { label: 'PENDING REVIEW', icon: <Clock size={14} />, color: '#854d0e', bg: '#fef9c3' };
         }
     };
 
@@ -213,10 +248,15 @@ function EvaluatorReviewQueue() {
         if (modalType === 'submission' && selectedSubmission) {
             navigate(`/evaluate-research/${selectedSubmission.research_id}`);
         } else if (modalType === 'revision' && selectedRevision) {
+            // Pass revision data to the evaluation page
             navigate(`/evaluate-research/${selectedRevision.research_id}`, {
                 state: { 
                     revision: selectedRevision,
-                    isRevision: true 
+                    isRevision: true,
+                    revisionId: selectedRevision.revision_id,
+                    revisionType: selectedRevision.revision_type,
+                    revisionComment: selectedRevision.researcher_comment,
+                    revisedFileUrl: selectedRevision.new_file_url
                 }
             });
         }
@@ -232,7 +272,11 @@ function EvaluatorReviewQueue() {
     const getFilteredItems = () => {
         let items = [];
         if (activeTab === 'submissions') {
-            items = researches.filter(r => r.status?.toLowerCase() === 'pending');
+            // Only show submissions with status 'Pending' (not yet evaluated)
+            items = researches.filter(r => 
+                r.status?.toLowerCase() === 'pending' || 
+                r.status?.toLowerCase() === 'under_review'
+            );
         } else {
             items = revisions;
         }
@@ -251,7 +295,10 @@ function EvaluatorReviewQueue() {
     };
 
     const filteredItems = getFilteredItems();
-    const pendingSubmissionsCount = researches.filter(r => r.status?.toLowerCase() === 'pending').length;
+    const pendingSubmissionsCount = researches.filter(r => 
+        r.status?.toLowerCase() === 'pending' || 
+        r.status?.toLowerCase() === 'under_review'
+    ).length;
     const pendingRevisionsCount = revisions.length;
     const totalPending = pendingSubmissionsCount + pendingRevisionsCount;
 
@@ -262,6 +309,13 @@ function EvaluatorReviewQueue() {
                 <div className="alog-page-header">
                     <h1>Evaluation Queue</h1>
                     <p>Research papers and revisions assigned to you for evaluation.</p>
+                    {totalPending > 0 && (
+                        <div className="queue-summary">
+                            <span className="queue-badge">
+                                Total Pending: {totalPending}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="alog-card">
@@ -399,9 +453,14 @@ function EvaluatorReviewQueue() {
                                         <span className="alog-research-title">
                                             {isRevision ? item.research_title : item.title}
                                         </span>
-                                        {isRevision && item.revision_type && (
+                                        {isRevision && (
                                             <span className="alog-action-tag">
-                                                Revision submitted
+                                                {item.revision_type_display} • Submitted {formatDate(item.submitted_at)}
+                                            </span>
+                                        )}
+                                        {!isRevision && item.research_files && item.research_files.length > 0 && (
+                                            <span className="alog-action-tag">
+                                                {item.research_files.length} file(s) attached
                                             </span>
                                         )}
                                     </div>
@@ -473,19 +532,21 @@ function EvaluatorReviewQueue() {
                                 {selectedSubmission.research_files && selectedSubmission.research_files.length > 0 && (
                                     <div className="detail-section">
                                         <h3>Research Files</h3>
-                                        {selectedSubmission.research_files.map((file, idx) => (
-                                            <a
-                                                key={idx}
-                                                href={file.file_url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="revision-history-file"
-                                                style={{ display: 'inline-flex', marginRight: '1rem' }}
-                                            >
-                                                <Paperclip size={14} />
-                                                View Research Paper
-                                            </a>
-                                        ))}
+                                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                                            {selectedSubmission.research_files.map((file, idx) => (
+                                                <a
+                                                    key={idx}
+                                                    href={file.file_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="revision-history-file"
+                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                                                >
+                                                    <Paperclip size={14} />
+                                                    {file.file_type || 'Research Paper'}
+                                                </a>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -542,8 +603,8 @@ function EvaluatorReviewQueue() {
 
                                 {selectedRevision.researcher_comment && (
                                     <div className="detail-section">
-                                        <h3>Researcher's Comment</h3>
-                                        <div className="evaluator-notes-box" style={{ borderLeftColor: '#3b82f6' }}>
+                                        <h3>Researcher's Cover Letter</h3>
+                                        <div className="evaluator-notes-box" style={{ borderLeftColor: '#3b82f6', background: '#f8fafc' }}>
                                             {selectedRevision.researcher_comment}
                                         </div>
                                     </div>
@@ -560,13 +621,13 @@ function EvaluatorReviewQueue() {
 
                                 {selectedRevision.new_file_url && (
                                     <div className="detail-section">
-                                        <h3>Revised File</h3>
+                                        <h3>Revised Manuscript</h3>
                                         <a
                                             href={selectedRevision.new_file_url}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="revision-history-file"
-                                            style={{ display: 'inline-flex' }}
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
                                         >
                                             <Paperclip size={14} />
                                             Download Revised Paper

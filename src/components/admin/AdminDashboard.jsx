@@ -5,7 +5,8 @@ import Navbar from './AdminNavbar';
 import {
     Users, ClipboardList, BookOpen, CheckCircle,
     Clock, TrendingUp, UserCheck, AlertCircle,
-    BarChart2, FileText, RotateCcw
+    BarChart2, FileText, Plus, UserPlus,
+    FileSearch, Download, Mail, Settings
 } from 'lucide-react';
 import './AdminDashboard.css';
 
@@ -74,16 +75,18 @@ export default function AdminDashboard() {
 
             const approvedCount = evaluations.filter(e => normalize(e.overall_recommendation) === 'approved').length;
             const rejectedCount = evaluations.filter(e => normalize(e.overall_recommendation) === 'rejected').length;
-            const revisionCount = evaluations.filter(e =>
-                normalize(e.overall_recommendation) === 'minor_revision' ||
-                normalize(e.overall_recommendation) === 'major_revision'
-            ).length;
+
+            const revisionPapers = allResearch.filter(r => {
+                const status = (r.status || '').toLowerCase();
+                return status === 'minor_revision' || status === 'major_revision';
+            });
+            const revisionCount = revisionPapers.length;
 
             setStats({
                 totalUsers: users.length,
                 activeUsers: users.filter(u => !u.deleted_at).length,
                 totalResearch: allResearch.length,
-                pendingQueue: trulyPendingInQueue.length, // Updated to only show active tasks
+                pendingQueue: trulyPendingInQueue.length,
                 evaluatedResearch: evaluatedIds.size,
                 approvedResearch: approvedCount,
                 rejectedResearch: rejectedCount,
@@ -195,100 +198,60 @@ export default function AdminDashboard() {
                     </div>
                 </section>
 
-                {/* Evaluation Breakdown + Recent Research */}
-                <section className="dash-bottom-grid">
-
-                    {/* Evaluation Breakdown */}
-                    <div className="dash-card">
-                        <div className="dash-card-header">
-                            <h2>Evaluation Breakdown</h2>
-                            <CheckCircle size={18} className="card-header-icon" />
-                        </div>
-
-                        <div className="breakdown-list">
-                            {/* Approved Bar */}
-                            <div className="breakdown-item">
-                                <div className="breakdown-label">
-                                    <span className="dot green" />
-                                    <span>Approved</span>
-                                </div>
-                                <div className="breakdown-bar-wrap">
-                                    <div className="breakdown-bar green" style={{ width: stats.totalResearch ? `${(stats.approvedResearch / stats.totalResearch) * 100}%` : '0%' }} />
-                                </div>
-                                <span className="breakdown-count">{stats.approvedResearch}</span>
-                            </div>
-
-                            {/* Revision Bar */}
-                            <div className="breakdown-item">
-                                <div className="breakdown-label">
-                                    <span className="dot blue" />
-                                    <span>Revision</span>
-                                </div>
-                                <div className="breakdown-bar-wrap">
-                                    <div className="breakdown-bar blue" style={{ width: stats.totalResearch ? `${(stats.revisionResearch / stats.totalResearch) * 100}%` : '0%' }} />
-                                </div>
-                                <span className="breakdown-count">{stats.revisionResearch}</span>
-                            </div>
-
-                            {/* Rejected Bar */}
-                            <div className="breakdown-item">
-                                <div className="breakdown-label">
-                                    <span className="dot red" />
-                                    <span>Rejected</span>
-                                </div>
-                                <div className="breakdown-bar-wrap">
-                                    <div className="breakdown-bar red" style={{ width: stats.totalResearch ? `${(stats.rejectedResearch / stats.totalResearch) * 100}%` : '0%' }} />
-                                </div>
-                                <span className="breakdown-count">{stats.rejectedResearch}</span>
-                            </div>
-
-                        </div>
-
-                        {!loading && stats.evaluatedResearch > 0 && (
-                            <div className="breakdown-footer">
-                                <AlertCircle size={13} />
-                                <span>
-                                    {Math.round((stats.approvedResearch / stats.evaluatedResearch) * 100)}% approval rate
-                                </span>
-                            </div>
-                        )}
+                {/* Evaluation Breakdown */}
+                <div className="dash-card">
+                    <div className="dash-card-header">
+                        <h2>Evaluation Breakdown</h2>
+                        <CheckCircle size={18} className="card-header-icon" />
                     </div>
 
-                    <div className="dash-card">
-                        <div className="dash-card-header">
-                            <h2>Workflow Status</h2>
-                            <RotateCcw size={18} className="card-header-icon" />
+                    <div className="breakdown-list">
+                        {/* Approved Bar */}
+                        <div className="breakdown-item">
+                            <div className="breakdown-label">
+                                <span className="dot green" />
+                                <span>Approved</span>
+                            </div>
+                            <div className="breakdown-bar-wrap">
+                                <div className="breakdown-bar green" style={{ width: stats.totalResearch ? `${(stats.approvedResearch / stats.totalResearch) * 100}%` : '0%' }} />
+                            </div>
+                            <span className="breakdown-count">{stats.approvedResearch}</span>
                         </div>
 
-                        <div className="breakdown-list">
-
-                            <div className="breakdown-item">
-                                <div className="breakdown-label">
-                                    <span className="dot amber" />
-                                    <span>In Queue</span>
-                                </div>
-                                <div className="breakdown-bar-wrap">
-                                    <div className="breakdown-bar amber"
-                                        style={{ width: stats.totalResearch ? `${(stats.pendingQueue / stats.totalResearch) * 100}%` : '0%' }} />
-                                </div>
-                                <span className="breakdown-count">{stats.pendingQueue}</span>
+                        {/* Revision Bar */}
+                        <div className="breakdown-item">
+                            <div className="breakdown-label">
+                                <span className="dot blue" />
+                                <span>Revision</span>
                             </div>
-
-                            <div className="breakdown-item">
-                                <div className="breakdown-label">
-                                    <span className="dot gray" />
-                                    <span>Unassigned</span>
-                                </div>
-                                <div className="breakdown-bar-wrap">
-                                    <div className="breakdown-bar gray"
-                                        style={{ width: stats.totalResearch ? `${(stats.unassignedResearch / stats.totalResearch) * 100}%` : '0%' }} />
-                                </div>
-                                <span className="breakdown-count">{stats.unassignedResearch}</span>
+                            <div className="breakdown-bar-wrap">
+                                <div className="breakdown-bar blue" style={{ width: stats.totalResearch ? `${(stats.revisionResearch / stats.totalResearch) * 100}%` : '0%' }} />
                             </div>
+                            <span className="breakdown-count">{stats.revisionResearch}</span>
+                        </div>
 
+                        {/* Rejected Bar */}
+                        <div className="breakdown-item">
+                            <div className="breakdown-label">
+                                <span className="dot red" />
+                                <span>Rejected</span>
+                            </div>
+                            <div className="breakdown-bar-wrap">
+                                <div className="breakdown-bar red" style={{ width: stats.totalResearch ? `${(stats.rejectedResearch / stats.totalResearch) * 100}%` : '0%' }} />
+                            </div>
+                            <span className="breakdown-count">{stats.rejectedResearch}</span>
                         </div>
                     </div>
-                </section>
+
+                    {!loading && stats.evaluatedResearch > 0 && (
+                        <div className="breakdown-footer">
+                            <AlertCircle size={13} />
+                            <span>
+                                {Math.round((stats.approvedResearch / stats.evaluatedResearch) * 100)}% approval rate
+                            </span>
+                        </div>
+                    )}
+                </div>
 
                 {/* Recent Research */}
                 <div className="dash-card">

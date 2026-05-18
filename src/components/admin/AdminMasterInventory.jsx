@@ -175,22 +175,27 @@ export default function AdminMasterInventory() {
                     evaluatorEmail = evaluatorUser.email;
                 }
 
-                evaluationsByResearch[evaluation.research_id].push({
-                    id: evaluation.evaluator_id,
-                    name: evaluatorName || 'Unknown Evaluator',
-                    email: evaluatorEmail || 'No email',
-                    recommendation: evaluation.overall_recommendation,
-                    evaluation_date: evaluation.evaluated_at,
-                    methodology: evaluation.methodology,
-                    strengths: evaluation.strengths,
-                    weaknesses: evaluation.weaknesses,
-                    comments: evaluation.additional_comments,
-                    scores: {
-                        sci_rigor: evaluation.sci_rigor,
-                        relevant_to_hru_obj: evaluation.relevant_to_hru_obj,
-                        ethical_compliance: evaluation.ethical_compliance
-                    }
-                });
+                const alreadyExists = evaluationsByResearch[evaluation.research_id]
+                    .some(e => e.id === evaluation.evaluator_id);
+
+                if (!alreadyExists) {
+                    evaluationsByResearch[evaluation.research_id].push({
+                        id: evaluation.evaluator_id,
+                        name: evaluatorName || 'Unknown Evaluator',
+                        email: evaluatorEmail || 'No email',
+                        recommendation: evaluation.overall_recommendation,
+                        evaluation_date: evaluation.evaluated_at,
+                        methodology: evaluation.methodology,
+                        strengths: evaluation.strengths,
+                        weaknesses: evaluation.weaknesses,
+                        comments: evaluation.additional_comments,
+                        scores: {
+                            sci_rigor: evaluation.sci_rigor,
+                            relevant_to_hru_obj: evaluation.relevant_to_hru_obj,
+                            ethical_compliance: evaluation.ethical_compliance
+                        }
+                    });
+                }
             });
 
             const processedResearches = (researchData || []).map(research => {

@@ -704,14 +704,14 @@
     color: #4b5563;
 }
 
-.queue-status-badge.status-under-review {
+.queue-status-badge.status-in-review {
     background-color: #eff6ff;
     color: #1d4ed8;
 }
 
-.queue-status-badge.status-revision {
-    background-color: #fef3c7;
-    color: #92400e;
+.queue-status-badge.status-re-evaluation {
+    background-color: #fdf4ff;
+    color: #7e22ce;
 }
 
 .queue-status-badge.status-approved {
@@ -722,6 +722,12 @@
 .queue-status-badge.status-rejected {
     background-color: #fef2f2;
     color: #dc2626;
+}
+
+.icon-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: all;
 }
 
 /* Responsive adjustments */

@@ -1,0 +1,558 @@
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600&display=swap');
+
+:root {
+    --bg-cream: #F6F2E5;
+    --navy-dark: #031640;
+    --navy-muted: #2E344A;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --white: #ffffff;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background: var(--bg-cream);
+    color: var(--text-main);
+}
+
+.dashboard-wrapper {
+    position: fixed;
+    top: 60px;
+    left: 75px;
+    right: 0;
+    bottom: 0;
+    transition: margin-left 0.3s ease;
+    padding: 20px;
+    overflow: hidden;
+}
+
+.dashboard-container {
+    max-width: 1300px;
+    height: 100%;
+    margin: 0 auto;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* FIRST ROW */
+.first-row {
+    display: flex;
+    justify-content: left;
+    align-items: center;
+    gap: 10rem;
+    margin-bottom: 3rem;
+    flex-wrap: wrap;
+}
+
+.title-section h1 {
+    font-family: 'Crimson Text', serif;
+    font-size: 45px;
+    color: var(--navy-dark);
+}
+
+.stats-group {
+    display: flex;
+    gap: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    background: var(--white);
+    padding: 1rem 2rem;
+    border-radius: 45px;
+    box-shadow: var(--shadow);
+    min-width: 160px;
+}
+
+.stat-item:last-child {
+    border-right: none;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #2D3142;
+}
+
+.stat-label {
+    display: block;
+    text-align: left;
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+}
+
+.research-icon {
+    color: var(--white);
+    padding: 10px;
+    background: var(--navy-muted);
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    line-height: 1.2;
+}
+
+/* Add Study  */
+.add-study-btn {
+    margin-top: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background-color: var(--navy-dark);
+    color: var(--white);
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.add-study-btn:hover {
+    background-color: #1b2c5e;
+    transform: translateY(-2px);
+}
+
+/* Second row */
+.second-row {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    width: 100%;
+    margin-top: 2rem;
+    align-items: flex-start;
+    overflow: hidden;
+}
+
+.studies-section {
+    flex: 2;
+    min-width: 300px;
+    background: white;
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    max-height: 500px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.calendar-section {
+    flex: 1;
+    min-width: 280px;
+    min-height: 280px;
+    background: white;
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    align-self: flex-start;
+    /* stops it from stretching to table height */
+}
+
+
+/* Study section */
+.studies-section h2 {
+    margin-bottom: 1.5rem;
+    color: #1a1a1a;
+}
+
+.table-responsive {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Replace table styles with card styles */
+.study-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.study-card:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.study-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.hru-label {
+    font-size: 0.72rem;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+.file-type-pills {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.study-card-body strong {
+    font-size: 0.95rem;
+    color: #0f172a;
+    line-height: 1.4;
+}
+
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.clickable-row:hover {
+    background-color: #f1f5f9;
+}
+
+
+.file-type-badge {
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+    background: #e0e7ff;
+    color: #3730a3;
+    padding: 4px 8px;
+    border-radius: 6px;
+    width: fit-content;
+}
+
+/* Calendar */
+.calendar-day {
+    position: relative;
+    cursor: default;
+}
+
+.calendar-day.has-submissions {
+    cursor: pointer;
+    font-weight: 800;
+    color: #031640;
+}
+
+.calendar-day.has-submissions:hover {
+    background: #e8edf7;
+    border-radius: 6px;
+}
+
+.calendar-dot {
+    position: absolute;
+    bottom: 1px;
+    right: 1px;
+    background: #031640;
+    color: white;
+    font-size: 0.55rem;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.calendar-day.today .calendar-dot {
+    background: white;
+    color: #031640;
+}
+
+.cal-modal {
+    max-width: 420px !important;
+}
+
+.cal-study-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cal-study-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    gap: 12px;
+}
+
+.cal-study-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+}
+
+.cal-study-info strong {
+    font-size: 0.875rem;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+}
+
+.cal-study-time {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+/* MODAL / OVERLAY STYLES */
+.modal-content {
+    max-width: 1000px;
+}
+
+.modal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.edit-submission-btn {
+    padding: 8px 16px;
+    background: #031640;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.edit-submission-btn:hover {
+    background: #1b2c5e;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #0f172a;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #64748b;
+    transition: color 0.2s;
+}
+
+.close-btn:hover {
+    color: #910303;
+}
+
+.modal-body {
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.detail-section {
+    margin-bottom: 30px;
+}
+
+.detail-section h3 {
+    font-size: 1rem;
+    color: #334155;
+    margin-bottom: 16px;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 8px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.detail-item label {
+    display: block;
+    font-size: 0.8rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+
+.detail-item p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #0f172a;
+    font-weight: 500;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+    margin-top: 10px;
+}
+
+.description-text {
+    line-height: 1.6;
+    font-weight: 400 !important;
+}
+
+.bioinformatics-section {
+    background: #f8fafc;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+/* FILE CARDS IN MODAL */
+.file-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+}
+
+.file-card {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+}
+
+.file-card:hover {
+    border-color: #031b42;
+    background: #eff6ff;
+}
+
+.file-icon {
+    color: #022050;
+    margin-right: 12px;
+}
+
+.file-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.fname {
+    font-size: 0.9rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ftype {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.download-icon {
+    color: #94a3b8;
+}
+
+.file-card:hover .download-icon {
+    color: #01173a;
+}
+
+/* for phone */
+@media (max-width: 1024px) {
+    .second-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .first-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .stats-group {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+.view-log-btn {
+    padding: 8px 16px;
+    background: transparent;
+    color: #031640;
+    border: 1.5px solid #031640;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.view-log-btn:hover {
+    background: #031640;
+    color: white;
+}

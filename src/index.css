@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Cutive&family=League+Spartan:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 /* Universal box-sizing ensures padding and borders don't increase element sizes */
 * {
@@ -9,7 +11,8 @@
 
 body {
   font-family: 'League Spartan', sans-serif;
-  background-color: #f4f4f9; /* A nice, soft off-white background for your dashboards */
+  background-color: #f4f4f9;
+  /* A nice, soft off-white background for your dashboards */
   color: #333333;
 }
 
@@ -18,4 +21,73 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+.table-container {
+  background-color: #ffffff;
+  border-radius: 40px;
+  padding: 20px 40px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  margin-top: 20px;
+}
+
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Inter', sans-serif;
+}
+
+.user-table th {
+  text-align: left;
+  padding: 20px 15px;
+  color: #b2bec3;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #f1f2f6;
+}
+
+.user-table td {
+  padding: 25px 15px;
+  color: #636e72;
+  font-size: 0.95rem;
+  border-bottom: 1px solid #f1f2f6;
+}
+
+.user-table td:first-child {
+  font-weight: 700;
+  color: #2d3436;
+}
+
+.user-table tr:last-child td {
+  border-bottom: none;
+}
+
+.role-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.role-badge.admin {
+  background-color: #fff0f0;
+  color: #c0392b;
+}
+
+.role-badge.evaluator {
+  background-color: #fff8e1;
+  color: #f39c12;
+}
+
+.role-badge.researcher {
+  background-color: #e8f5e9;
+  color: #27ae60;
+}
+
+.type-cell {
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  color: #b2bec3;
 }

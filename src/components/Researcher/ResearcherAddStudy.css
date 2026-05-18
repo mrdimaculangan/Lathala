@@ -1,0 +1,364 @@
+.add-study-page {
+    background-color: #fdfaf5;
+    min-height: 100vh;
+    padding-top: 80px;
+    font-family: 'Inter', sans-serif;
+}
+
+.form-wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.breadcrumb-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    position: relative;
+    background: #f1f1f1;
+    padding: 6px;
+    border-radius: 50px;
+}
+
+.breadcrumb-item {
+    position: relative;
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 600;
+    z-index: 1;
+    color: #666;
+    transition: color 0.3s;
+}
+
+.breadcrumb-item.active {
+    color: white;
+}
+
+.blob {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #333a52;
+    border-radius: 40px;
+    z-index: -1;
+}
+
+
+.section-card {
+    background: white;
+    border-radius: 45px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+    padding-bottom: 30px;
+}
+
+.section-header {
+    background: #333a52;
+    color: white;
+    padding: 20px 45px;
+    border-radius: 35px;
+    margin: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.section-header h2 {
+    margin: 0;
+    font-weight: bold;
+    font-size: 2rem;
+    letter-spacing: 0.5px;
+}
+
+.section-header i {
+    font-weight: 300;
+    margin-left: 10px;
+}
+
+
+.section-content {
+    padding: 20px 50px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+}
+
+.full { grid-column: span 2; }
+
+.input-group label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #000;
+    font-size: 0.95rem;
+}
+
+/*  Bioinformatics Yes/No Buttons */
+.bio-button-group {
+    display: flex;
+    gap: 15px;
+    margin-top: 5px;
+}
+
+.bio-btn {
+    flex: 1;
+    max-width: 150px;
+    padding: 12px 24px;
+    background: transparent;
+    border: 2px solid #333a52;
+    color: #333a52;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.bio-btn:hover {
+    background: #f0f2f5;
+}
+
+.bio-btn.active {
+    background: #333a52;
+    color: white;
+    box-shadow: 0 4px 10px rgba(51, 58, 82, 0.25);
+    transform: translateY(-2px);
+}
+
+.input-group input,
+.input-group textarea,
+.input-group select,
+.co-author-input {
+    width: 100%;
+    padding: 14px 20px;
+    border: 1.5px solid #333a52;
+    border-radius: 18px;
+    background: #fff;
+    font-size: 1rem;
+    margin-bottom: 10px;
+}
+
+.input-group input::placeholder {
+    color: #aaa;
+}
+
+
+.add-btn, .upload-btn {
+    width: 100%;
+    padding: 18px;
+    border-radius: 18px;
+    border: none;
+    background: #8e94a5;
+    color: white;
+    font-weight: 700;
+    font-size: 1.1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.add-btn:hover, .upload-btn:hover {
+    opacity: 0.9;
+}
+
+
+.navigation-footer {
+    display: flex;
+    padding: 0 50px;
+    margin-top: 30px;
+}
+
+.spacer { flex: 1; }
+
+.co-author-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+
+.co-author-wrapper {
+    position: relative;
+    width: 100%;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+}
+
+.co-author-input {
+    width: 100%;
+    margin-bottom: 0 !important;
+}
+
+.inner-delete-btn {
+    position: absolute;
+    right: 15px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    transition: transform 0.2s;
+}
+
+.inner-delete-btn:hover {
+    transform: scale(1.2);
+}
+
+.inner-delete-btn svg {
+    stroke-width: 2.5px;
+}
+
+.inner-delete-btn:hover svg {
+    color: #666 !important;
+}
+
+.file-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.file-item-row .file-type-select {
+    width: auto !important;
+    min-width: 160px;
+    flex-shrink: 0;
+    margin-bottom: 0 !important;   /* removes the 10px gap pushing it down */
+    border-radius: 10px;
+}
+
+.file-item-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+}
+
+.file-name {
+    flex: 1;
+    font-weight: 600;
+    color: #333a52;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-hint {
+    font-size: 0.8rem;
+    color: #888;
+    margin-top: 6px;
+    margin-left: 4px;
+}
+
+/* ── Custom Select Arrow ── */
+.input-group select,
+.file-type-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23333a52' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 16px;
+    padding-right: 44px;
+    cursor: pointer;
+}
+
+
+.remove-file-btn {
+    flex-shrink: 0;
+    background: #450202;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.remove-file-btn:hover {
+    background: #5e0202;
+}
+
+/* BUTTONS N HOVER STATES*/
+.nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 28px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.nav-btn.prev {
+    background: #e0e0e0;
+    color: #444;
+    outline: none;
+}
+
+.nav-btn.next {
+    background: #333a52;
+    color: white;
+}
+
+.nav-btn.submit-btn {
+    background: #2e7d32;
+    color: white;
+}
+
+.nav-btn.next:hover {
+    background: #4a5270;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(51, 58, 82, 0.3);
+}
+
+.nav-btn.prev:hover {
+    background: #c8c8c8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.nav-btn.submit-btn:hover {
+    background: #1b5e20;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(46, 125, 50, 0.35);
+}
+
+.disabled-input {
+    background: #f0f0f0 !important;
+    color: #666 !important;
+    cursor: not-allowed !important;
+    border-color: #ccc !important;
+    pointer-events: none;
+}
+
+.bio-question {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #000;
+    margin-bottom: 12px;
+}

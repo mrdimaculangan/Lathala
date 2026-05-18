@@ -12,6 +12,18 @@ export default function ResearcherDashboard() {
     const { firstName, lastName, session } = UserAuth();
     const authorName = firstName ? `${firstName} ${lastName}` : session?.user?.email;
 
+    useEffect(() => {
+        const originalBodyOverflow = document.body.style.overflow;
+        const originalHtmlOverflow = document.documentElement.style.overflow;
+        document.body.style.overflow = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
+
+        return () => {
+            document.body.style.overflow = originalBodyOverflow;
+            document.documentElement.style.overflow = originalHtmlOverflow;
+        };
+    }, []);
+
     // Stats (derived from Research table)
     const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
 

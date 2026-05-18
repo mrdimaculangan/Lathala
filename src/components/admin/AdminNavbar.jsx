@@ -72,12 +72,6 @@ export default function AdminNavbar() {
                     <div className='sidebar-divider'></div>
                     <ul className='sidebar-list'>
                         <li>
-                            <NavLink to="/settings" className='sidebar-link'>
-                                <Settings size={22} className='sidebar-icon' />
-                                <span className='sidebar-text'>Settings</span>
-                            </NavLink>
-                        </li>
-                        <li>
                             <Logout />
                         </li>
                     </ul>

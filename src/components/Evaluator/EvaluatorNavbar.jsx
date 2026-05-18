@@ -121,12 +121,6 @@ export default function EvaluatorNavbar() {
                             </NavLink>
                         </li>
                         <li>
-                            <NavLink to="/settings" className='sidebar-link'>
-                                <Settings size={22} className='sidebar-icon' />
-                                <span className='sidebar-text'>Settings</span>
-                            </NavLink>
-                        </li>
-                        <li>
                             <Logout />
                         </li>
                     </ul>

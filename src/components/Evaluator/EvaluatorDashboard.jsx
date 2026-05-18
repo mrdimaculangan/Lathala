@@ -65,6 +65,8 @@ function EvaluatorDashboard() {
                 .in('research_id', assignedIds)
                 .order('registration_date', { ascending: false });
 
+            console.log('Raw researchData:', JSON.stringify(researchData, null, 2));
+
             const formatted = (researchData || []).map(r => ({
                 ...r,
                 author: r.Researcher?.Users

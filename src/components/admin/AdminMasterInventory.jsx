@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
-import { Search, Filter, Eye, X, FileText, Download, Users, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Search, Filter, Eye, X, FileText, Download, Users, Calendar, CheckCircle, XCircle, Clock, FileSpreadsheet } from 'lucide-react';
 import AdminNavbar from "./AdminNavbar";
 import "./AdminMasterInventory.css";
 
@@ -49,11 +49,153 @@ export default function AdminMasterInventory() {
         setCurrentPage(1);
     }, [searchTerm, filterStatus, researches]);
 
+    // Add this inside your component, after other useEffects
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            const dropdown = document.getElementById('exportDropdown');
+            const btn = document.getElementById('exportBtn');
+            if (dropdown && btn && !btn.contains(event.target) && !dropdown.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        };
+
+        const exportBtn = document.getElementById('exportBtn');
+        const toggleDropdown = () => {
+            const dropdown = document.getElementById('exportDropdown');
+            if (dropdown) {
+                dropdown.classList.toggle('show');
+            }
+        };
+
+        if (exportBtn) {
+            exportBtn.addEventListener('click', toggleDropdown);
+        }
+        document.addEventListener('click', handleClickOutside);
+
+        return () => {
+            if (exportBtn) {
+                exportBtn.removeEventListener('click', toggleDropdown);
+            }
+            document.removeEventListener('click', handleClickOutside);
+        };
+    }, []);
+
     const totalPages = Math.ceil(filteredResearches.length / ITEMS_PER_PAGE);
     const paginatedResearches = filteredResearches.slice(
         (currentPage - 1) * ITEMS_PER_PAGE,
         currentPage * ITEMS_PER_PAGE
     );
+
+    const exportToCSV = () => {
+        const exportData = filteredResearches.map(research => ({
+            'HRU NO.': research.hru_no || '',
+            'Research Title': research.title || '',
+            'Author': research.researcher_name || '',
+            'Evaluators': research.evaluators?.map(e => e.name).join(', ') || 'No evaluators',
+            'Status': getStatusDisplayText(research.current_status),
+            'Evaluation Date': research.evaluators?.[0]?.evaluation_date
+                ? new Date(research.evaluators[0].evaluation_date).toLocaleDateString()
+                : 'N/A',
+            'Registration Date': research.registration_date
+                ? new Date(research.registration_date).toLocaleDateString()
+                : 'N/A',
+            'Author Email': research.researcher_email || 'N/A',
+            'Recommendation Details': research.evaluators?.map(e =>
+                `${e.name}: ${getStatusDisplayText(e.recommendation)}`
+            ).join('; ') || 'No evaluation'
+        }));
+
+        const headers = Object.keys(exportData[0] || {});
+
+        const csvRows = [];
+
+        csvRows.push(headers.join(','));
+
+        for (const row of exportData) {
+            const values = headers.map(header => {
+                const value = row[header] || '';
+                const escaped = String(value).replace(/"/g, '""');
+                return `"${escaped}"`;
+            });
+            csvRows.push(values.join(','));
+        }
+
+        const csvString = csvRows.join('\n');
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', `master_inventory_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    const exportFilteredView = () => {
+        if (filteredResearches.length === 0) {
+            alert('No data to export.');
+            return;
+        }
+        exportToCSV();
+    };
+
+    const exportAllData = async () => {
+        try {
+            if (researches.length === 0) {
+                alert('No research data to export.');
+                return;
+            }
+
+            const exportData = researches.map(research => ({
+                'HRU NO.': research.hru_no || '',
+                'Research Title': research.title || '',
+                'Author': research.researcher_name || 'Unknown',  // Now uses correct field
+                'Evaluators': research.evaluators?.map(e => e.name).join(', ') || 'No evaluators',
+                'Status': getStatusDisplayText(research.current_status),
+                'Evaluation Date': research.evaluators?.[0]?.evaluation_date
+                    ? new Date(research.evaluators[0].evaluation_date).toLocaleDateString()
+                    : 'N/A',
+                'Registration Date': research.registration_date
+                    ? new Date(research.registration_date).toLocaleDateString()
+                    : 'N/A',
+                'Author Email': research.researcher_email || 'N/A'
+            }));
+
+            const headers = Object.keys(exportData[0] || {});
+            const csvRows = [headers.join(',')];
+
+            for (const row of exportData) {
+                const values = headers.map(header => {
+                    const value = row[header] || '';
+                    const escaped = String(value).replace(/"/g, '""');
+                    return `"${escaped}"`;
+                });
+                csvRows.push(values.join(','));
+            }
+
+            const csvString = csvRows.join('\n');
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', `all_research_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+        } catch (error) {
+            console.error('Export error:', error);
+            alert('Failed to export data. Please try again.');
+        }
+    };
 
     async function loadMasterData() {
         setLoading(true);
@@ -369,6 +511,25 @@ export default function AdminMasterInventory() {
                                 <option value="major_revision">Major Revision</option>
                                 <option value="rejected">Rejected</option>
                             </select>
+                        </div>
+
+                        {/* Export Dropdown Button */}
+                        <div className="export-dropdown">
+                            <button className="export-btn" id="exportBtn">
+                                <FileSpreadsheet size={18} />
+                                Export
+                                <span className="export-arrow">▼</span>
+                            </button>
+                            <div className="export-dropdown-content" id="exportDropdown">
+                                <button onClick={exportFilteredView}>
+                                    <Download size={14} />
+                                    Export Current View
+                                </button>
+                                <button onClick={exportAllData}>
+                                    <FileText size={14} />
+                                    Export All Research
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </header>

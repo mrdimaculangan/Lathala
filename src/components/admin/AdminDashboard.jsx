@@ -6,7 +6,7 @@ import {
     Users, ClipboardList, BookOpen, CheckCircle,
     Clock, TrendingUp, UserCheck, AlertCircle,
     BarChart2, FileText, Plus, UserPlus,
-    FileSearch, Download, Mail, Settings
+    FileSearch, Download, Mail, Settings, Calendar
 } from 'lucide-react';
 import './AdminDashboard.css';
 
@@ -26,6 +26,7 @@ export default function AdminDashboard() {
     });
     const [recentResearch, setRecentResearch] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [monthlyData, setMonthlyData] = useState([]);
 
     useEffect(() => {
         fetchDashboardData();
@@ -45,6 +46,49 @@ export default function AdminDashboard() {
             const allResearch = allResearchRes.data || [];
             const queue = queueRes.data || [];
             const evaluations = evaluationsRes.data || [];
+
+            // Calculate monthly submissions
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const currentYear = new Date().getFullYear();
+            const monthlyCounts = Array(12).fill(0);
+
+            allResearch.forEach(research => {
+                if (research.registration_date) {
+                    const date = new Date(research.registration_date);
+                    if (date.getFullYear() === currentYear) {
+                        const month = date.getMonth();
+                        monthlyCounts[month]++;
+                    }
+                }
+            });
+
+            // Get last 6 months with data
+            const currentMonth = new Date().getMonth();
+            const last6Months = [];
+            for (let i = 5; i >= 0; i--) {
+                let monthIndex = currentMonth - i;
+                let year = currentYear;
+                if (monthIndex < 0) {
+                    monthIndex += 12;
+                    year--;
+                }
+                last6Months.push({
+                    name: monthNames[monthIndex],
+                    count: monthlyCounts[monthIndex],
+                    year: year,
+                    monthIndex: monthIndex
+                });
+            }
+
+            // Find max count for scaling (max bar height = 80px)
+            const maxCount = Math.max(...last6Months.map(m => m.count), 1);
+
+            const monthlyChartData = last6Months.map(month => ({
+                ...month,
+                height: month.count === 0 ? 4 : Math.max(20, (month.count / maxCount) * 70) // Min 20px, max 90px
+            }));
+
+            setMonthlyData(monthlyChartData);
 
             const evaluatedIds = new Set(evaluations.map(e => Number(e.research_id)));
 
@@ -198,60 +242,104 @@ export default function AdminDashboard() {
                     </div>
                 </section>
 
-                {/* Evaluation Breakdown */}
-                <div className="dash-card">
-                    <div className="dash-card-header">
-                        <h2>Evaluation Breakdown</h2>
-                        <CheckCircle size={18} className="card-header-icon" />
+                {/* Monthly Trend + Evaluation Breakdown Row */}
+                <section className="dash-two-column-grid">
+                    {/* Monthly Submissions Trend */}
+                    <div className="dash-card">
+                        <div className="dash-card-header">
+                            <h2>Monthly Submissions</h2>
+                            <Calendar size={18} className="card-header-icon" />
+                        </div>
+                        {loading ? (
+                            <p className="dash-loading-text">Loading trend data...</p>
+                        ) : (
+                            <div className="trend-container">
+                                <div className="trend-bars">
+                                    {monthlyData.map((month, idx) => (
+                                        <div key={idx} className="trend-item">
+                                            <div
+                                                className="trend-bar"
+                                                style={{
+                                                    height: `${month.height}px`,
+                                                    backgroundColor: month.count > 0 ? '#4f46e5' : '#e2e8f0'
+                                                }}
+                                            >
+                                                {month.count > 0 && (
+                                                    <span className="trend-value">{month.count}</span>
+                                                )}
+                                            </div>
+                                            <span className="trend-label">{month.name}</span>
+                                            {month.year !== new Date().getFullYear() && (
+                                                <span className="trend-year">{month.year}</span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="trend-footer">
+                                    <span className="trend-total">
+                                        Total: {monthlyData.reduce((sum, m) => sum + m.count, 0)} submissions
+                                    </span>
+                                    <span className="trend-period">Last 6 months</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="breakdown-list">
-                        {/* Approved Bar */}
-                        <div className="breakdown-item">
-                            <div className="breakdown-label">
-                                <span className="dot green" />
-                                <span>Approved</span>
-                            </div>
-                            <div className="breakdown-bar-wrap">
-                                <div className="breakdown-bar green" style={{ width: stats.totalResearch ? `${(stats.approvedResearch / stats.totalResearch) * 100}%` : '0%' }} />
-                            </div>
-                            <span className="breakdown-count">{stats.approvedResearch}</span>
+                    {/* Evaluation Breakdown */}
+                    <div className="dash-card">
+                        <div className="dash-card-header">
+                            <h2>Evaluation Breakdown</h2>
+                            <CheckCircle size={18} className="card-header-icon" />
                         </div>
 
-                        {/* Revision Bar */}
-                        <div className="breakdown-item">
-                            <div className="breakdown-label">
-                                <span className="dot blue" />
-                                <span>Revision</span>
+                        <div className="breakdown-list">
+                            {/* Approved Bar */}
+                            <div className="breakdown-item">
+                                <div className="breakdown-label">
+                                    <span className="dot green" />
+                                    <span>Approved</span>
+                                </div>
+                                <div className="breakdown-bar-wrap">
+                                    <div className="breakdown-bar green" style={{ width: stats.totalResearch ? `${(stats.approvedResearch / stats.totalResearch) * 100}%` : '0%' }} />
+                                </div>
+                                <span className="breakdown-count">{stats.approvedResearch}</span>
                             </div>
-                            <div className="breakdown-bar-wrap">
-                                <div className="breakdown-bar blue" style={{ width: stats.totalResearch ? `${(stats.revisionResearch / stats.totalResearch) * 100}%` : '0%' }} />
+
+                            {/* Revision Bar */}
+                            <div className="breakdown-item">
+                                <div className="breakdown-label">
+                                    <span className="dot blue" />
+                                    <span>Revision</span>
+                                </div>
+                                <div className="breakdown-bar-wrap">
+                                    <div className="breakdown-bar blue" style={{ width: stats.totalResearch ? `${(stats.revisionResearch / stats.totalResearch) * 100}%` : '0%' }} />
+                                </div>
+                                <span className="breakdown-count">{stats.revisionResearch}</span>
                             </div>
-                            <span className="breakdown-count">{stats.revisionResearch}</span>
+
+                            {/* Rejected Bar */}
+                            <div className="breakdown-item">
+                                <div className="breakdown-label">
+                                    <span className="dot red" />
+                                    <span>Rejected</span>
+                                </div>
+                                <div className="breakdown-bar-wrap">
+                                    <div className="breakdown-bar red" style={{ width: stats.totalResearch ? `${(stats.rejectedResearch / stats.totalResearch) * 100}%` : '0%' }} />
+                                </div>
+                                <span className="breakdown-count">{stats.rejectedResearch}</span>
+                            </div>
                         </div>
 
-                        {/* Rejected Bar */}
-                        <div className="breakdown-item">
-                            <div className="breakdown-label">
-                                <span className="dot red" />
-                                <span>Rejected</span>
+                        {!loading && stats.evaluatedResearch > 0 && (
+                            <div className="breakdown-footer">
+                                <AlertCircle size={13} />
+                                <span>
+                                    {Math.round((stats.approvedResearch / stats.evaluatedResearch) * 100)}% approval rate
+                                </span>
                             </div>
-                            <div className="breakdown-bar-wrap">
-                                <div className="breakdown-bar red" style={{ width: stats.totalResearch ? `${(stats.rejectedResearch / stats.totalResearch) * 100}%` : '0%' }} />
-                            </div>
-                            <span className="breakdown-count">{stats.rejectedResearch}</span>
-                        </div>
+                        )}
                     </div>
-
-                    {!loading && stats.evaluatedResearch > 0 && (
-                        <div className="breakdown-footer">
-                            <AlertCircle size={13} />
-                            <span>
-                                {Math.round((stats.approvedResearch / stats.evaluatedResearch) * 100)}% approval rate
-                            </span>
-                        </div>
-                    )}
-                </div>
+                </section>
 
                 {/* Recent Research */}
                 <div className="dash-card">

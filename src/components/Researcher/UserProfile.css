@@ -40,22 +40,30 @@ body {
 }
 
 .profile-wrapper {
-    min-height: 100vh;
+    position: fixed;
+    top: 60px;
+    left: 75px;
+    right: 0;
+    bottom: 0;
+    padding: 20px;
+    overflow: hidden;
 }
 
 .profile-container {
     max-width: 1300px;
+    height: 100%;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 1rem 2rem 2rem;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 /* PROFILE HEADER */
 .profile-header {
     display: flex;
     align-items: center;
-    margin-bottom: 3rem;
+    margin-bottom: 1.75rem;
     padding-bottom: 2rem;
     border-bottom: 2px solid #f1f5f9;
 }

@@ -5,18 +5,26 @@
 }
 
 .login-page {
+    position: fixed;
+    inset: 0;
     display: flex;
-    min-height: 100vh;
+    flex-wrap: wrap;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    margin: 0;
     font-family: 'Crimson Text', serif;
 }
 
 .login-brand-section {
-    flex: 1;
+    flex: 1 1 50%;
+    min-width: 320px;
     background-color: #E6DDC4;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 60px;
+    overflow: hidden;
 }
 
 .brand-content {
@@ -46,17 +54,20 @@
 }
 
 .login-form-section {
-    flex: 1;
+    flex: 1 1 50%;
+    min-width: 320px;
     background-color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 40px;
+    overflow: hidden;
 }
 
 .login-box {
     width: 100%;
     max-width: 450px;
+    max-height: calc(100vh - 80px);
 }
 
 .login-header {

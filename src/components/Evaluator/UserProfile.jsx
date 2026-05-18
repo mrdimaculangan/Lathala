@@ -1,70 +1,30 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { User, Mail, Calendar, FileText, CheckCircle, XCircle, AlertCircle, Paperclip, ArrowRight, BarChart3 } from "lucide-react";
-import { supabase } from "../../supabaseClient.js";
+import React, { useEffect } from "react";
+import { User } from "lucide-react";
 import { UserAuth } from "../../context/AuthContext.jsx";
 import EvaluatorNavbar from "./EvaluatorNavbar";
 import "./UserProfile.css";
 
 export default function UserProfile() {
-    const navigate = useNavigate();
-    const { firstName, lastName, session, userRole, dbId } = UserAuth();
+    const { firstName, lastName, session, userRole } = UserAuth();
     const displayName = firstName ? `${firstName} ${lastName}` : session?.user?.email;
     const userEmail = session?.user?.email;
 
-    const [loading, setLoading] = useState(true);
-    const [statistics, setStatistics] = useState({
-        total: 0,
-        pending: 0,
-        approved: 0,
-        rejected: 0,
-        minorRevisions: 0,
-        majorRevisions: 0
-    });
-
     useEffect(() => {
-        if (!dbId) {
-            setLoading(false);
-            return;
-        }
+        const originalBodyOverflow = document.body.style.overflow;
+        const originalHtmlOverflow = document.documentElement.style.overflow;
+        document.body.style.overflow = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
 
-        async function fetchStatistics() {
-            try {
-                const { data, error } = await supabase
-                    .from('Research')
-                    .select('status');
-
-                if (error) throw error;
-
-                // Calculate statistics
-                const stats = {
-                    total: data?.length || 0,
-                    pending: data?.filter(s => s.status === 'Pending').length || 0,
-                    approved: data?.filter(s => s.status === 'Approved').length || 0,
-                    rejected: data?.filter(s => s.status === 'Rejected').length || 0,
-                    minorRevisions: data?.filter(s => s.status === 'With Minor Revisions').length || 0,
-                    majorRevisions: data?.filter(s => s.status === 'With Major Revisions').length || 0
-                };
-                setStatistics(stats);
-            } catch (error) {
-                console.error("Error fetching statistics:", error.message);
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        fetchStatistics();
-    }, [dbId]);
+        return () => {
+            document.body.style.overflow = originalBodyOverflow;
+            document.documentElement.style.overflow = originalHtmlOverflow;
+        };
+    }, []);
 
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
         const date = new Date(dateString);
         return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-    };
-
-    const truncateUUID = (uuid) => {
-        if (!uuid) return 'N/A';
-        return `${uuid.substring(0, 8)}...${uuid.substring(uuid.length - 8)}`;
     };
 
     return (
@@ -123,59 +83,6 @@ export default function UserProfile() {
                             </div>
                         </div>
                     </div>
-
-                    {/* RIGHT SIDEBAR */}
-                    <aside className="profile-sidebar">
-                        {/* STATISTICS CARDS */}
-                        <div className="sidebar-section stats-section">
-                            <h3>Research Statistics</h3>
-                            <div className="stat-cards-group">
-                                <div className="stat-card total-card">
-                                    <div className="stat-icon">
-                                        <Paperclip size={32} />
-                                    </div>
-                                    <div className="stat-info">
-                                        <span className="stat-number">{statistics.total}</span>
-                                        <span className="stat-label">Total Researches</span>
-                                    </div>
-                                </div>
-                                <div className="stat-card pending-stat">
-                                    <div className="stat-icon">
-                                        <FileText size={32} />
-                                    </div>
-                                    <div className="stat-info">
-                                        <span className="stat-number">{statistics.pending}</span>
-                                        <span className="stat-label">Pending</span>
-                                    </div>
-                                </div>
-                                <div className="stat-card approved-stat">
-                                    <div className="stat-icon">
-                                        <CheckCircle size={32} />
-                                    </div>
-                                    <div className="stat-info">
-                                        <span className="stat-number">{statistics.approved}</span>
-                                        <span className="stat-label">Approved</span>
-                                    </div>
-                                </div>
-                                <div className="stat-card rejected-stat">
-                                    <div className="stat-icon">
-                                        <XCircle size={32} />
-                                    </div>
-                                    <div className="stat-info">
-                                        <span className="stat-number">{statistics.rejected}</span>
-                                        <span className="stat-label">Rejected</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* ADDITIONAL INFO */}
-                        <div className="sidebar-section info-section">
-                            <h3>Need Help?</h3>
-                            <p>Visit our documentation or contact support for assistance with your evaluation tasks.</p>
-                            <button className="info-action-btn">Contact Support</button>
-                        </div>
-                    </aside>
                 </div>
             </main>
         </div>

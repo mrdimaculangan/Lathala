@@ -23,19 +23,24 @@ body {
 }
 
 .dashboard-wrapper {
-    min-height: 100vh;
-    margin-top: 60px;
-    margin-left: 75px;
+    position: fixed;
+    top: 60px;
+    left: 75px;
+    right: 0;
+    bottom: 0;
     transition: margin-left 0.3s ease;
     padding: 20px;
+    overflow: hidden;
 }
 
 .dashboard-container {
     max-width: 1300px;
+    height: 100%;
     margin: 0 auto;
     padding: 2rem;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 /* FIRST ROW */
@@ -133,6 +138,7 @@ body {
     width: 100%;
     margin-top: 2rem;
     align-items: flex-start;
+    overflow: hidden;
 }
 
 .studies-section {
@@ -145,6 +151,7 @@ body {
     max-height: 500px;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .calendar-section {
@@ -172,6 +179,7 @@ body {
 .table-responsive {
     overflow-y: auto;
     flex: 1;
+    min-height: 0;
 }
 
 /* Replace table styles with card styles */

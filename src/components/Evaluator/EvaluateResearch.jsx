@@ -13,6 +13,7 @@ function EvaluateResearch() {
     const leftCardRef = useRef(null);
     const [leftCardHeight, setLeftCardHeight] = useState(0);
     const [research, setResearch] = useState(null);
+    const [bioinformatics, setBioinformatics] = useState(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [evaluatorId, setEvaluatorId] = useState(null);
@@ -209,6 +210,29 @@ function EvaluateResearch() {
             data.author_email = users?.email || 'No email';
 
             setResearch(data);
+
+            // If this research has linked Bioinformatics data, fetch it and store locally
+            try {
+                if (data.bioinformatics_id) {
+                    const { data: bioData, error: bioError } = await supabase
+                        .from('Bioinformatics')
+                        .select('*')
+                        .eq('bioinformatics_id', data.bioinformatics_id)
+                        .single();
+
+                    if (bioError) {
+                        console.error('Error fetching bioinformatics:', bioError);
+                        setBioinformatics(null);
+                    } else {
+                        setBioinformatics(bioData || null);
+                    }
+                } else {
+                    setBioinformatics(null);
+                }
+            } catch (err) {
+                console.error('Unexpected error fetching bioinformatics:', err);
+                setBioinformatics(null);
+            }
         } catch (error) {
             console.error("Error fetching research details:", error);
             setResearch(null);
@@ -499,6 +523,31 @@ function EvaluateResearch() {
                                     <p className="no-files">No files submitted</p>
                                 )}
                             </div>
+                        </div>
+                        <div className="detail-section bioinformatics-section">
+                            <h3>Bioinformatics Details</h3>
+                            {bioinformatics ? (
+                                <div className="detail-grid">
+                                    <div className="detail-item">
+                                        <label>Organism Name</label>
+                                        <p>{bioinformatics.organism_name || 'N/A'}</p>
+                                    </div>
+                                    <div className="detail-item">
+                                        <label>Accession Number</label>
+                                        <p>{bioinformatics.accession_number || 'N/A'}</p>
+                                    </div>
+                                    <div className="detail-item">
+                                        <label>Sequence Type</label>
+                                        <p>{bioinformatics.sequence_type || 'N/A'}</p>
+                                    </div>
+                                    <div className="detail-item">
+                                        <label>Data Source</label>
+                                        <p>{bioinformatics.data_source || bioinformatics._data_source || 'N/A'}</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="no-bioinformatics-message">There are no bioinformatics data used in this research.</p>
+                            )}
                         </div>
                     </aside>
 

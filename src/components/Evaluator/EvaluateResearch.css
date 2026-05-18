@@ -496,3 +496,55 @@
 .file-action-btn:active {
     transform: scale(0.98);
 }
+
+/* Bioinformatics Section */
+.detail-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.detail-section h3 {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.detail-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.detail-item {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+}
+
+.detail-item label {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.detail-item p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #1e293b;
+    line-height: 1.5;
+}
+
+.no-bioinformatics-message {
+    font-style: italic;
+    color: #64748b;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 0;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border-left: 3px solid #94a3b8;
+}

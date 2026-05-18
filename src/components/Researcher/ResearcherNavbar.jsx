@@ -93,12 +93,6 @@ export default function ResearcherNavbar() {
                             </NavLink>
                         </li>
                         <li>
-                            <NavLink to="/user-profile" className='sidebar-link'>
-                                <Users size={22} className='sidebar-icon' />
-                                <span className='sidebar-text'>Profile</span>
-                            </NavLink>
-                        </li>
-                        <li>
                             <NavLink to="/researcher-activity-log" className={({ isActive }) => isActive ? 'sidebar-link active' : 'sidebar-link'}>
                                 <FileText size={22} className='sidebar-icon' />
                                 <span className='sidebar-text'>Activity Log</span>
@@ -107,6 +101,12 @@ export default function ResearcherNavbar() {
                     </ul>
                     <div className='sidebar-divider'></div>
                     <ul className='sidebar-list'>
+                        <li>
+                            <NavLink to="/user-profile" className='sidebar-link'>
+                                <Users size={22} className='sidebar-icon' />
+                                <span className='sidebar-text'>Profile</span>
+                            </NavLink>
+                        </li>
                         <li><Logout /></li>
                     </ul>
                 </div>

@@ -1,20 +1,73 @@
 .admin-layout {
+    position: fixed;
+    top: 55px;
+    left: 75px;
+    right: 0;
+    bottom: 0;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    overflow: hidden;
+    scrollbar-width: none;
+}
+
+.admin-layout::-webkit-scrollbar {
+    display: none;
 }
 
 .admin-content {
     margin-left: 75px;
-    padding-top: 100px;
+    padding-top: 4px;
     padding-left: 40px;
     padding-right: 80px;
     background-color: #F6F2E5;
-    min-height: 100vh;
+    height: 100%;
     transition: margin-left 0.3s ease;
     display: flex;
     flex-direction: column;
-    gap: 28px;
+    gap: 8px;
+    overflow: auto;
+}
+
+.admin-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.admin-content::-webkit-scrollbar-track {
+    background: #F6F2E5;
+}
+
+.admin-content::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+.admin-content::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}
+
+/* Ensure page-level overflow is hidden when admin pages are active */
+html.admin-fixed, body.admin-fixed {
+    overflow: hidden !important;
+}
+
+/* Hide native scrollbars when admin pages are fixed (cross-browser) */
+html.admin-fixed::-webkit-scrollbar, body.admin-fixed::-webkit-scrollbar {
+    display: none;
+}
+html.admin-fixed, body.admin-fixed {
+    scrollbar-width: none; /* Firefox */
+}
+
+/* Recent submissions: limit height with no scrollbar */
+.recent-list {
+    max-height: 120px;
+    overflow: hidden;
+    padding-right: 12px;
+    scrollbar-width: none;
+}
+
+.recent-list::-webkit-scrollbar {
+    display: none;
 }
 
 /* Welcome Header */

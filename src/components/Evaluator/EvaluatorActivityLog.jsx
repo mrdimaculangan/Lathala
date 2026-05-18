@@ -37,6 +37,18 @@ export default function EvaluatorActivityLog() {
     const [evaluatorInfo, setEvaluatorInfo] = useState(null); // ADDED missing state
 
     useEffect(() => {
+        const originalBodyOverflow = document.body.style.overflow;
+        const originalHtmlOverflow = document.documentElement.style.overflow;
+        document.body.style.overflow = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
+
+        return () => {
+            document.body.style.overflow = originalBodyOverflow;
+            document.documentElement.style.overflow = originalHtmlOverflow;
+        };
+    }, []);
+
+    useEffect(() => {
         if (!authUserId) return;
         fetchLogs();
     }, [authUserId, logId]);
@@ -207,11 +219,12 @@ export default function EvaluatorActivityLog() {
                         <span>Evaluated On</span>
                     </div>
 
-                    {loading ? (
-                        <div className="alog-empty">
-                            <RefreshCw size={24} className="spinning" />
-                            <p>Loading evaluation history...</p>
-                        </div>
+                    <div className="alog-card-body">
+                        {loading ? (
+                            <div className="alog-empty">
+                                <RefreshCw size={24} className="spinning" />
+                                <p>Loading evaluation history...</p>
+                            </div>
                     ) : error ? (
                         <div className="alog-empty">
                             <XCircle size={48} strokeWidth={1} style={{ color: '#dc2626' }} />
@@ -264,6 +277,7 @@ export default function EvaluatorActivityLog() {
                             </div>
                         );
                     })}
+                    </div>
                 </div>
             </main>
 

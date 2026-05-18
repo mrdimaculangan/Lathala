@@ -11,6 +11,18 @@ function EvaluatorDashboard() {
     const [loading, setLoading]                   = useState(true);
     const [currentDate, setCurrentDate]           = useState(new Date());
     const [selectedResearch, setSelectedResearch] = useState(null);
+
+    useEffect(() => {
+        const originalBodyOverflow = document.body.style.overflow;
+        const originalHtmlOverflow = document.documentElement.style.overflow;
+        document.body.style.overflow = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
+
+        return () => {
+            document.body.style.overflow = originalBodyOverflow;
+            document.documentElement.style.overflow = originalHtmlOverflow;
+        };
+    }, []);
     const [showModal, setShowModal]               = useState(false);
     const [activeTab, setActiveTab]               = useState('submissions'); // ADDED
 
@@ -305,7 +317,10 @@ function EvaluatorDashboard() {
             <Navbar />
             <main className="dashboard-container">
                 <div className="first-row">
-                    <div className="title-section"><h1>Evaluator Dashboard</h1></div>
+                    <div className="title-section">
+                        <h1>Evaluator Dashboard</h1>
+                        <p>Evaluate research submissions and review progress below.</p>
+                    </div>
                     <div className="stats-group">
                         <div className="stat-item">
                             <Paperclip size={45} className="research-icon" />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import logoImg from '../assets/logo.png';
@@ -10,6 +10,18 @@ function Login() {
     const [error, setError] = useState(null);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const originalBodyOverflow = document.body.style.overflow;
+        const originalHtmlOverflow = document.documentElement.style.overflow;
+        document.body.style.overflow = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
+
+        return () => {
+            document.body.style.overflow = originalBodyOverflow;
+            document.documentElement.style.overflow = originalHtmlOverflow;
+        };
+    }, []);
 
     const handleLogin = async (e) => {
         e.preventDefault();

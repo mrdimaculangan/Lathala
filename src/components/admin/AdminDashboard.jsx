@@ -30,6 +30,23 @@ export default function AdminDashboard() {
         fetchDashboardData();
     }, []);
 
+    useEffect(() => {
+        const originalBodyOverflow = document.body.style.overflow;
+        const originalHtmlOverflow = document.documentElement.style.overflow;
+        document.body.style.overflow = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
+
+        document.body.classList.add('admin-fixed');
+        document.documentElement.classList.add('admin-fixed');
+
+        return () => {
+            document.body.style.overflow = originalBodyOverflow;
+            document.documentElement.style.overflow = originalHtmlOverflow;
+            document.body.classList.remove('admin-fixed');
+            document.documentElement.classList.remove('admin-fixed');
+        };
+    }, []);
+
     async function fetchDashboardData() {
         setLoading(true);
         try {

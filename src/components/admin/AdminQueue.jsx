@@ -68,12 +68,16 @@ export default function AdminQueue() {
             if (evalRes.error) throw evalRes.error;
 
             const latestEvalMap = {};
-
             (evalRes.data || []).forEach(e => {
                 if (!latestEvalMap[e.research_id]) {
                     latestEvalMap[e.research_id] = e.overall_recommendation;
                 }
             });
+
+            // Track which research IDs already have evaluator work submitted
+            const researchWithEvalWork = new Set(
+                (evalRes.data || []).map(e => e.research_id)
+            );
 
             const finishedIds = Object.entries(latestEvalMap)
                 .filter(([_, rec]) => {
@@ -155,22 +159,19 @@ export default function AdminQueue() {
 
                     let queueStatus = 'Pending Assignment';
 
-                    if (isRevision) {
-                        queueStatus = 'Resubmitted Revision';
+                    if (isRevision && isAssigned) {
+                        queueStatus = 'Pending Re-evaluation';
                     } else if (isAssigned) {
-                        queueStatus = 'Under Review';
+                        queueStatus = 'In Review';
                     }
 
                     return {
                         ...research,
-
                         isRevision,
-
+                        hasEvalWork: researchWithEvalWork.has(research.research_id), // ← NEW
                         researcher_name: `${research.Researcher?.Users?.first_name || ''} ${research.Researcher?.Users?.last_name || ''}`.trim() || 'Unknown',
                         researcher_email: research.Researcher?.Users?.email,
-
                         assigned_evaluators: assignedEvaluators,
-
                         queueStatus
                     };
                 });
@@ -236,7 +237,10 @@ export default function AdminQueue() {
         const alreadyId = alreadyAssigned ? Number(alreadyAssigned.evaluator_id) : null;
 
         try {
+            // If reassigning, notify the old evaluator first
             if (alreadyId !== null && alreadyId !== currentSelection) {
+                await notifyUnassignedEvaluator(alreadyId);
+
                 const { error: deleteError } = await supabase
                     .from('Research_Queue')
                     .delete()
@@ -258,7 +262,6 @@ export default function AdminQueue() {
 
                 if (insertError) throw insertError;
 
-                // NEW: Clear the Pending revision record once assigned
                 if (assignTarget.isRevision) {
                     await supabase
                         .from('ResearchRevisions')
@@ -278,6 +281,47 @@ export default function AdminQueue() {
             alert('Error saving assignments. Please try again.');
         } finally {
             setSaving(false);
+        }
+    };
+
+    // Notify old evaluator they've been unassigned
+    const notifyUnassignedEvaluator = async (oldEvaluatorId) => {
+        try {
+            const { data: evaluatorData, error } = await supabase
+                .from('Evaluator')
+                .select('evaluator_id, user_id')
+                .eq('evaluator_id', oldEvaluatorId)
+                .single();
+
+            if (error || !evaluatorData) return;
+
+            const { data: { session } } = await supabase.auth.getSession();
+            const adminUserId = session?.user?.id;
+
+            const { data: logData } = await supabase
+                .from('ResearchActivityLog')
+                .insert([{
+                    research_id: assignTarget.research_id,
+                    actor_id: adminUserId,
+                    actor_role: 'admin',
+                    action: 'unassigned_evaluator',
+                    notes: `Evaluator ID: ${oldEvaluatorId} was unassigned from research "${assignTarget.title}" (${assignTarget.hru_no}).`,
+                }])
+                .select()
+                .single();
+
+            await supabase
+                .from('evaluator_notifications')
+                .insert({
+                    recipient_id: evaluatorData.user_id,
+                    research_id: assignTarget.research_id,
+                    log_id: logData?.log_id || null,
+                    message: `You have been unassigned from research "${assignTarget.title}" (${assignTarget.hru_no}).`,
+                    is_read: false,
+                    is_deleted: false,
+                });
+        } catch (error) {
+            console.error('Error notifying unassigned evaluator:', error);
         }
     };
 
@@ -430,15 +474,6 @@ export default function AdminQueue() {
                                         <td className="title-cell">
                                             <div className="title-wrapper">
                                                 <span className="research-title-text">{research.title}</span>
-                                                {research.isRevision ? (
-                                                    <span className="badge-re-evaluation">
-                                                        <RotateCcw size={12} /> RE-EVALUATION
-                                                    </span>
-                                                ) : research.assigned_evaluators.length === 0 ? (
-                                                    <span className="badge-new-submission">NEW SUBMISSION</span>
-                                                ) : (
-                                                    <span className="badge-pending-eval">UNDER REVIEW</span>
-                                                )}
                                             </div>
                                         </td>
                                         <td>{research.researcher_name}</td>
@@ -457,10 +492,10 @@ export default function AdminQueue() {
                                         </td>
                                         <td>
                                             <span
-                                                className={`queue-status-badge ${research.queueStatus === 'Under Review'
-                                                    ? 'status-under-review'
-                                                    : research.queueStatus === 'Resubmitted Revision'
-                                                        ? 'status-revision'
+                                                className={`queue-status-badge ${research.queueStatus === 'In Review'
+                                                    ? 'status-in-review'
+                                                    : research.queueStatus === 'Pending Re-evaluation'
+                                                        ? 'status-re-evaluation'
                                                         : 'status-pending'
                                                     }`}
                                             >
@@ -469,7 +504,16 @@ export default function AdminQueue() {
                                         </td>
                                         <td>{new Date(research.registration_date).toLocaleDateString()}</td>
                                         <td className="action-btns">
-                                            <button className="icon-btn assign-btn" onClick={() => handleAssignClick(research)}>
+                                            <button
+                                                className="icon-btn assign-btn"
+                                                onClick={() => handleAssignClick(research)}
+                                                disabled={research.queueStatus === 'Pending Re-evaluation'}
+                                                title={
+                                                    research.queueStatus === 'Pending Re-evaluation'
+                                                        ? 'Cannot reassign a resubmitted revision'
+                                                        : 'Assign evaluator'
+                                                }
+                                            >
                                                 <UserPlus size={18} />
                                             </button>
                                         </td>

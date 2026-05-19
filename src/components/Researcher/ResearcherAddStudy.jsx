@@ -244,6 +244,15 @@ export default function ResearcherAddStudy() {
                 if (fileRecordError) throw fileRecordError;
             }
 
+            await supabase.from('ResearchActivityLog').insert([{
+                research_id:     research.research_id,
+                actor_id:        dbId,
+                actor_role:      'researcher',
+                action:          'submitted',
+                notes:           null,
+                status_snapshot: 'Pending',
+            }]);
+
             // Success:
             toast.success('Study submitted successfully!');
             setTimeout(() => { window.location.href = '/researcher-dashboard'; }, 1500);

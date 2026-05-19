@@ -37,6 +37,7 @@ export default function ResearcherDashboard() {
 
     // Modal for study details
     const [selectedStudy, setSelectedStudy] = useState(null);
+    const [selectedLogEntry, setSelectedLogEntry] = useState(null); // Track which log was clicked
     const [studyDetails, setStudyDetails] = useState({ coauthors: [], bio: null, dept: null, hraa: null });
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -108,23 +109,57 @@ export default function ResearcherDashboard() {
         if (!dbId) return;
 
         async function fetchData() {
-            // 1. Fetch all researches for stats + calendar
+            setLoadingLogs(true);
+
+            // 1. Fetch all researches
             const { data: researchData, error: researchError } = await supabase
                 .from('Research')
-                .select(`*, research_files ( file_url, file_type )`)
+                .select(`*`)
                 .eq('researcher_id', dbId)
                 .order('created_at', { ascending: false });
 
             if (researchError) {
-                console.error("Error fetching researches:", researchError.message);
+                console.error("❌ Error fetching researches:", researchError.message);
                 setLoadingLogs(false);
                 return;
             }
 
-            const all = researchData || [];
-            setResearches(researchData || []);
+            // 2. Get latest file for each research (for the "no logs" fallback)
+            const researchesWithLatestFiles = await Promise.all(
+                (researchData || []).map(async (research) => {
+                    const { data: latestRevision } = await supabase
+                        .from('ResearchRevisions')
+                        .select('new_file_url')
+                        .eq('research_id', research.research_id)
+                        .order('submitted_at', { ascending: false })
+                        .limit(1);
 
-            // Stats
+                    let latestFiles = [];
+
+                    if (latestRevision && latestRevision.length > 0 && latestRevision[0].new_file_url) {
+                        latestFiles = [{
+                            file_url: latestRevision[0].new_file_url,
+                            file_type: "Research Paper"
+                        }];
+                    } else {
+                        const { data: originalFiles } = await supabase
+                            .from('research_files')
+                            .select('file_url, file_type')
+                            .eq('research_id', research.research_id);
+                        latestFiles = originalFiles || [];
+                    }
+
+                    return {
+                        ...research,
+                        research_files: latestFiles
+                    };
+                })
+            );
+
+            setResearches(researchesWithLatestFiles);
+            const all = researchesWithLatestFiles;
+
+            // 3. Calculate stats
             const clean = (s) => s?.replace(/"/g, '').trim();
             setStats({
                 total: all.length,
@@ -133,21 +168,7 @@ export default function ResearcherDashboard() {
                 rejected: all.filter(s => clean(s.status) === 'Rejected').length,
             });
 
-            // Calendar date map
-            const dateMap = {};
-            all.forEach(study => {
-                const dateKey = new Date(study.created_at).toISOString().split('T')[0];
-                if (!dateMap[dateKey]) dateMap[dateKey] = [];
-                dateMap[dateKey].push({
-                    title: study.title,
-                    created_at: study.created_at,
-                    research_id: study.research_id,
-                    status: study.status
-                });
-            });
-            setSubmissionDates(dateMap);
-
-            // Revision counts
+            // 4. Calculate revision counts
             if (all.length > 0) {
                 const { data: revData } = await supabase
                     .from('ResearchRevisions')
@@ -161,32 +182,146 @@ export default function ResearcherDashboard() {
                 setRevisionCounts(revCounts);
             }
 
-            // 2. Fetch activity log entries for "Your Current Activity"
+            // 5. Build calendar date map
+            const dateMap = {};
+            all.forEach(study => {
+                const dateKey = new Date(study.created_at).toISOString().split('T')[0];
+                if (!dateMap[dateKey]) dateMap[dateKey] = [];
+                dateMap[dateKey].push({
+                    title: study.title,
+                    created_at: study.created_at,
+                    research_id: study.research_id,
+                    status: study.status
+                });
+            });
+            setSubmissionDates(dateMap);
+
+            // 6. Fetch activity logs with file info per log
+            let logData = []; // Declare logData outside the if block
+
             if (all.length > 0) {
-                const { data: logData, error: logError } = await supabase
+                const { data: fetchedLogs, error: logError } = await supabase
                     .from('ResearchActivityLog')
                     .select(`
-                        *,
-                        Research (
-                            research_id,
-                            title,
-                            hru_no,
-                            status,
-                            description,
-                            researcher_id,
-                            bioinformatics_id,
-                            department_id,
-                            hraa_id,
-                            registration_date,
-                            research_files ( file_url, file_type )
-                        )
-                    `)
+                *,
+                Research (
+                    research_id,
+                    title,
+                    hru_no,
+                    status,
+                    description,
+                    researcher_id,
+                    bioinformatics_id,
+                    department_id,
+                    hraa_id,
+                    registration_date
+                )
+            `)
                     .in('research_id', all.map(s => s.research_id))
                     .order('created_at', { ascending: false });
 
-                if (!logError) {
-                    setActivityLogs(logData || []);
+                if (!logError && fetchedLogs) {
+                    logData = fetchedLogs;
+
+                    // For each log, find the file that was submitted at that time
+                    const logsWithFiles = await Promise.all(
+                        logData.map(async (log) => {
+                            let fileUrl = null;
+                            let fileType = null;
+
+                            if (log.action === 'submitted') {
+                                // Original submission - get original file
+                                const { data: originalFile } = await supabase
+                                    .from('research_files')
+                                    .select('file_url, file_type')
+                                    .eq('research_id', log.research_id)
+                                    .maybeSingle();
+
+                                if (originalFile) {
+                                    fileUrl = originalFile.file_url;
+                                    fileType = originalFile.file_type;
+                                }
+                            } else if (log.action === 'revision_submitted') {
+                                // Find the revision submitted closest to this log's date
+                                const { data: revision } = await supabase
+                                    .from('ResearchRevisions')
+                                    .select('new_file_url, revision_type, submitted_at')
+                                    .eq('research_id', log.research_id)
+                                    .lte('submitted_at', log.created_at)
+                                    .order('submitted_at', { ascending: false })
+                                    .limit(1);
+
+                                if (revision && revision.length > 0 && revision[0].new_file_url) {
+                                    fileUrl = revision[0].new_file_url;
+                                    fileType = "Research Paper";
+                                }
+                            }
+
+                            return {
+                                ...log,
+                                display_file_url: fileUrl,
+                                display_file_type: fileType
+                            };
+                        })
+                    );
+
+                    setActivityLogs(logsWithFiles);
                 }
+            }
+
+            // 7. If there are researches with NO activity logs at all, create virtual log entries for them
+            if (all.length > 0 && (!logData || logData.length === 0)) {
+                console.log("📋 No activity logs found, creating virtual logs from researches");
+
+                // Create virtual log entries for researches without any activity
+                const virtualLogs = await Promise.all(
+                    all.map(async (research) => {
+                        // Get the original file for this research
+                        let fileUrl = null;
+                        let fileType = null;
+
+                        const { data: originalFile } = await supabase
+                            .from('research_files')
+                            .select('file_url, file_type')
+                            .eq('research_id', research.research_id)
+                            .maybeSingle();
+
+                        if (originalFile) {
+                            fileUrl = originalFile.file_url;
+                            fileType = originalFile.file_type;
+                        } else {
+                            // Check if there's a revision file
+                            const { data: revision } = await supabase
+                                .from('ResearchRevisions')
+                                .select('new_file_url')
+                                .eq('research_id', research.research_id)
+                                .order('submitted_at', { ascending: false })
+                                .limit(1);
+
+                            if (revision && revision.length > 0) {
+                                fileUrl = revision[0].new_file_url;
+                                fileType = "Research Paper";
+                            }
+                        }
+
+                        return {
+                            log_id: `virtual_${research.research_id}`,
+                            research_id: research.research_id,
+                            action: 'submitted',
+                            action_display: 'Submitted',
+                            created_at: research.created_at,
+                            status_snapshot: research.status,
+                            Research: research,
+                            display_file_url: fileUrl,
+                            display_file_type: fileType,
+                            is_virtual: true
+                        };
+                    })
+                );
+
+                // Sort by created_at descending
+                virtualLogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                setActivityLogs(virtualLogs);
             }
 
             setLoadingLogs(false);
@@ -200,14 +335,66 @@ export default function ResearcherDashboard() {
         if (!url) return "Unknown File";
         const parts = url.split('/');
         const fileWithTimestamp = parts[parts.length - 1];
-        return fileWithTimestamp.split('_').slice(1).join('_') || fileWithTimestamp;
+        return decodeURIComponent(fileWithTimestamp.split('_').slice(1).join('_') || fileWithTimestamp);
     };
 
-    const handleStudyClick = async (study) => {
-        setSelectedStudy(study);
+    const handleStudyClick = async (study, logEntry = null) => {
+        console.log("🔍 Modal: Selected study:", study?.research_id, study?.title);
+        console.log("🔍 Modal: Log entry:", logEntry?.log_id, logEntry?.action);
+
         setIsModalOpen(true);
+        setSelectedLogEntry(logEntry);
 
         try {
+            let fileToShow = [];
+
+            // Determine which file to show based on the log entry
+            if (logEntry && logEntry.action === 'revision_submitted' && logEntry.display_file_url) {
+                // Use the file from the log entry
+                fileToShow = [{
+                    file_url: logEntry.display_file_url,
+                    file_type: logEntry.display_file_type || "Research Paper"
+                }];
+                console.log("✅ Modal: Using revision file from log:", logEntry.display_file_url);
+            } else if (logEntry && logEntry.action === 'submitted' && logEntry.display_file_url) {
+                // Use the original submission file
+                fileToShow = [{
+                    file_url: logEntry.display_file_url,
+                    file_type: logEntry.display_file_type || "Research Paper"
+                }];
+                console.log("✅ Modal: Using original file from log:", logEntry.display_file_url);
+            } else {
+                // Fallback: get latest revision or original file
+                const { data: latestRevision } = await supabase
+                    .from('ResearchRevisions')
+                    .select('new_file_url')
+                    .eq('research_id', study.research_id)
+                    .order('submitted_at', { ascending: false })
+                    .limit(1);
+
+                if (latestRevision && latestRevision.length > 0 && latestRevision[0].new_file_url) {
+                    fileToShow = [{
+                        file_url: latestRevision[0].new_file_url,
+                        file_type: "Research Paper"
+                    }];
+                } else {
+                    const { data: originalFiles } = await supabase
+                        .from('research_files')
+                        .select('file_url, file_type')
+                        .eq('research_id', study.research_id);
+                    fileToShow = originalFiles || [];
+                }
+            }
+
+            // Update the study object with the correct files
+            const updatedStudy = {
+                ...study,
+                research_files: fileToShow
+            };
+
+            setSelectedStudy(updatedStudy);
+
+            // Fetch other details (coauthors, bio, dept, hraa)
             const [coauthorsRes, bioRes, deptRes, hraaRes] = await Promise.all([
                 supabase.from('research_coauthors').select('*').eq('research_id', study.research_id),
                 study.bioinformatics_id
@@ -227,6 +414,7 @@ export default function ResearcherDashboard() {
                 dept: deptRes.data,
                 hraa: hraaRes.data,
             });
+
         } catch (err) {
             console.error("Error fetching study details:", err);
         }
@@ -235,7 +423,24 @@ export default function ResearcherDashboard() {
     const closeModal = () => {
         setIsModalOpen(false);
         setSelectedStudy(null);
+        setSelectedLogEntry(null);
         setStudyDetails({ coauthors: [], bio: null, dept: null, hraa: null });
+    };
+
+    // Helper to get files for a log entry (for displaying in the card)
+    const getDisplayFilesForLog = (log) => {
+        if (log.action === 'revision_submitted' && log.display_file_url) {
+            return [{
+                file_url: log.display_file_url,
+                file_type: log.display_file_type || "Research Paper"
+            }];
+        } else if (log.action === 'submitted' && log.display_file_url) {
+            return [{
+                file_url: log.display_file_url,
+                file_type: log.display_file_type || "Research Paper"
+            }];
+        }
+        return [];
     };
 
     return (
@@ -289,7 +494,7 @@ export default function ResearcherDashboard() {
                 {/* ── Second row ── */}
                 <div className="second-row">
                     <div className="studies-section">
-                        <h2>Your Current Activity</h2>
+                        <h2>Revision Activity</h2>
 
                         {loadingLogs ? (
                             <p className="loading-text">Loading activity...</p>
@@ -311,7 +516,7 @@ export default function ResearcherDashboard() {
                                             <div
                                                 key={study.research_id}
                                                 className="study-card"
-                                                onClick={() => handleStudyClick(study)}
+                                                onClick={() => handleStudyClick(study, null)}
                                             >
                                                 <div className="study-card-header">
                                                     <span className="status-badge" style={{ background: statusColor.bg, color: statusColor.text }}>
@@ -367,11 +572,14 @@ export default function ResearcherDashboard() {
                                         'With Major Revisions': { bg: '#ede9fe', text: '#5b21b6', dot: '#8b5cf6' },
                                     }[status] || { bg: '#f1f5f9', text: '#475569', dot: '#94a3b8' };
 
+                                    // Get the specific files for this log entry
+                                    const displayFiles = getDisplayFilesForLog(log);
+
                                     return (
                                         <div
                                             key={log.log_id}
                                             className="study-card"
-                                            onClick={() => handleStudyClick(study)}
+                                            onClick={() => handleStudyClick(study, log)}
                                         >
                                             <div className="study-card-header">
                                                 <span className="status-badge" style={{ background: statusColor.bg, color: statusColor.text }}>
@@ -380,7 +588,7 @@ export default function ResearcherDashboard() {
                                                 </span>
                                                 <span className="hru-label">{study?.hru_no}</span>
                                                 <div className="file-type-pills">
-                                                    {study?.research_files?.map((f, i) => (
+                                                    {displayFiles.map((f, i) => (
                                                         <span key={i} className="file-type-badge">{f.file_type}</span>
                                                     ))}
                                                 </div>
@@ -393,13 +601,13 @@ export default function ResearcherDashboard() {
                                                     })}
                                                 </span>
                                             </div>
-                                            {revisionCounts[study?.research_id] > 0 && (
+                                            {log.action === 'revision_submitted' && (
                                                 <span style={{
                                                     fontSize: '0.7rem', background: '#e0e7ff', color: '#3730a3',
                                                     padding: '2px 8px', borderRadius: '999px', fontWeight: 600,
                                                     marginTop: '4px', width: 'fit-content', display: 'block'
                                                 }}>
-                                                    v{revisionCounts[study?.research_id] + 1} · {revisionCounts[study?.research_id]} revision{revisionCounts[study?.research_id] > 1 ? 's' : ''}
+                                                    Revision Submitted
                                                 </span>
                                             )}
                                         </div>
@@ -422,14 +630,6 @@ export default function ResearcherDashboard() {
                         <div className="modal-header">
                             <h2>{selectedStudy.title}</h2>
                             <div className="modal-header-actions">
-                                {selectedStudy.status?.replace(/"/g, '').trim() === 'Pending' && (
-                                    <button
-                                        className="edit-submission-btn"
-                                        onClick={() => navigate(`/researcher-study/edit/${selectedStudy.research_id}`)}
-                                    >
-                                        Edit Submission
-                                    </button>
-                                )}
                                 <button
                                     className="view-log-btn"
                                     onClick={() => { closeModal(); navigate('/researcher-activity-log'); }}
@@ -511,28 +711,34 @@ export default function ResearcherDashboard() {
                             <div className="detail-section">
                                 <h3>Attached Files</h3>
                                 <div className="file-grid">
-                                    {selectedStudy.research_files?.map((file, index) => (
-                                        <a
-                                            key={index}
-                                            href={file.file_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="file-card"
-                                        >
-                                            <FileText size={24} className="file-icon" />
-                                            <div className="file-info">
-                                                <span className="fname" title={getCleanFileName(file.file_url)}>
-                                                    {getCleanFileName(file.file_url)}
-                                                </span>
-                                                <span className="ftype">{file.file_type}</span>
-                                            </div>
-                                            <Download size={18} className="download-icon" />
-                                        </a>
-                                    ))}
-                                    {(!selectedStudy.research_files || selectedStudy.research_files.length === 0) && (
+                                    {selectedStudy.research_files && selectedStudy.research_files.length > 0 ? (
+                                        selectedStudy.research_files.map((file, index) => (
+                                            <a
+                                                key={index}
+                                                href={file.file_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="file-card"
+                                            >
+                                                <FileText size={24} className="file-icon" />
+                                                <div className="file-info">
+                                                    <span className="fname" title={getCleanFileName(file.file_url)}>
+                                                        {getCleanFileName(file.file_url)}
+                                                    </span>
+                                                    <span className="ftype">{file.file_type}</span>
+                                                </div>
+                                                <Download size={18} className="download-icon" />
+                                            </a>
+                                        ))
+                                    ) : (
                                         <p>No files attached.</p>
                                     )}
                                 </div>
+                                {selectedLogEntry && selectedLogEntry.action === 'revision_submitted' && (
+                                    <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.75rem', fontStyle: 'italic' }}>
+                                        This file was submitted as part of a revision on {new Date(selectedLogEntry.created_at).toLocaleDateString()}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -24,11 +24,29 @@ export default function AdminNavbar() {
         showBanner: false
     });
 
+    // NEW: Track if banner was dismissed by user
+    const [bannerDismissed, setBannerDismissed] = useState(() => {
+        // Check localStorage on initial load
+        const dismissed = localStorage.getItem('adminBannerDismissed');
+        if (dismissed) {
+            const dismissedTime = parseInt(dismissed);
+            const now = Date.now();
+            // If dismissed less than 30 minutes ago, keep dismissed state
+            if (now - dismissedTime < 30 * 60 * 1000) {
+                return true;
+            } else {
+                // Clear expired dismissal
+                localStorage.removeItem('adminBannerDismissed');
+                return false;
+            }
+        }
+        return false;
+    });
+
     // Fetch notifications for admin
     const fetchNotifications = async () => {
         setLoading(true);
         try {
-            // Fetch admin notifications from admin_notifications table
             const { data, error } = await supabase
                 .from('admin_notifications')
                 .select('*')
@@ -43,29 +61,6 @@ export default function AdminNavbar() {
             console.error('Error fetching notifications:', error);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const createAdminNotification = async (message, type, link) => {
-        try {
-            const { error } = await supabase
-                .from('admin_notifications')
-                .insert({
-                    message: message,
-                    type: type,
-                    link: link,
-                    is_read: false,
-                    created_at: new Date().toISOString()
-                });
-
-            if (error) {
-                console.error('Error creating notification:', error);
-            } else {
-                // Refresh notifications
-                fetchNotifications();
-            }
-        } catch (error) {
-            console.error('Error in createAdminNotification:', error);
         }
     };
 
@@ -103,14 +98,24 @@ export default function AdminNavbar() {
                 !queueIds.has(r.research_id) && !finalizedIds.has(r.research_id)
             );
 
+            const hasUnassigned = unassigned.length > 0;
+
             setPendingAlerts({
                 unassignedPapers: unassigned.length,
                 pendingQueue: queueData?.length || 0,
-                showBanner: unassigned.length > 0
+                // Show banner only if there are unassigned papers AND banner not dismissed
+                showBanner: hasUnassigned && !bannerDismissed
             });
         } catch (error) {
             console.error('Error fetching pending alerts:', error);
         }
+    };
+
+    // Handle banner dismissal
+    const handleDismissBanner = () => {
+        setBannerDismissed(true);
+        localStorage.setItem('adminBannerDismissed', Date.now().toString());
+        setPendingAlerts(prev => ({ ...prev, showBanner: false }));
     };
 
     useEffect(() => {
@@ -123,7 +128,7 @@ export default function AdminNavbar() {
         }, 30000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [bannerDismissed]); // Re-run when dismissed state changes
 
     const markAsRead = async (notificationId) => {
         try {
@@ -218,7 +223,7 @@ export default function AdminNavbar() {
                 </section>
             </nav>
 
-            {/* PENDING ALERTS BANNER */}
+            {/* PENDING ALERTS BANNER - UPDATED with persistent dismissal */}
             {pendingAlerts.showBanner && (
                 <div className="admin-alert-banner">
                     <div className="alert-banner-content">
@@ -235,7 +240,7 @@ export default function AdminNavbar() {
                         </Link>
                         <button
                             className="alert-close-btn"
-                            onClick={() => setPendingAlerts(prev => ({ ...prev, showBanner: false }))}
+                            onClick={handleDismissBanner}
                         >
                             ✕
                         </button>

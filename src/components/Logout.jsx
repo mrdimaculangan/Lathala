@@ -6,8 +6,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function Logout() {
     const navigate = useNavigate();
-    
-    // ✅ FIX: Use the hooks properly - they're hooks, not components
+
     const { clearNotifications: clearEvaluatorNotifications } = useEvaluatorNotifications();
     const { clearNotifications: clearResearcherNotifications } = useResearcherNotifications();
 
@@ -16,7 +15,10 @@ export default function Logout() {
             // Clear both notification types
             clearEvaluatorNotifications();
             clearResearcherNotifications();
-            
+
+            // Clear admin banner dismissal if it exists
+            localStorage.removeItem('adminBannerDismissed');
+
             // Tell Supabase to end the session
             const { error } = await supabase.auth.signOut();
 

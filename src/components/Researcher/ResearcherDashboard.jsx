@@ -29,31 +29,32 @@ export default function ResearcherDashboard() {
 
     // Activity log rows (from ResearchActivityLog, joined with Research)
     const [activityLogs, setActivityLogs] = useState([]);
-    const [loadingLogs, setLoadingLogs]   = useState(true);
+    const [loadingLogs, setLoadingLogs] = useState(true);
+    const [researches, setResearches] = useState([]);
 
     // Revision counts per research
     const [revisionCounts, setRevisionCounts] = useState({});
 
     // Modal for study details
     const [selectedStudy, setSelectedStudy] = useState(null);
-    const [studyDetails, setStudyDetails]   = useState({ coauthors: [], bio: null, dept: null, hraa: null });
-    const [isModalOpen, setIsModalOpen]     = useState(false);
+    const [studyDetails, setStudyDetails] = useState({ coauthors: [], bio: null, dept: null, hraa: null });
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Calendar
-    const [currentDate, setCurrentDate]       = useState(new Date());
+    const [currentDate, setCurrentDate] = useState(new Date());
     const [submissionDates, setSubmissionDates] = useState({});
-    const [calendarModal, setCalendarModal]   = useState(null);
+    const [calendarModal, setCalendarModal] = useState(null);
 
-    const getDaysInMonth    = (y, m) => new Date(y, m + 1, 0).getDate();
+    const getDaysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
     const getFirstDayOfMonth = (y, m) => new Date(y, m, 1).getDay();
 
     const renderCalendar = () => {
-        const year  = currentDate.getFullYear();
+        const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
         const daysInMonth = getDaysInMonth(year, month);
-        const firstDay    = getFirstDayOfMonth(year, month);
-        const monthNames  = ['January','February','March','April','May','June',
-            'July','August','September','October','November','December'];
+        const firstDay = getFirstDayOfMonth(year, month);
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'];
         const days = [];
 
         for (let i = 0; i < firstDay; i++) {
@@ -63,10 +64,10 @@ export default function ResearcherDashboard() {
             const isToday = i === new Date().getDate() &&
                 year === new Date().getFullYear() &&
                 month === new Date().getMonth();
-            const mm  = String(month + 1).padStart(2, '0');
-            const dd  = String(i).padStart(2, '0');
+            const mm = String(month + 1).padStart(2, '0');
+            const dd = String(i).padStart(2, '0');
             const key = `${year}-${mm}-${dd}`;
-            const dayStudies    = submissionDates[key];
+            const dayStudies = submissionDates[key];
             const hasSubmissions = dayStudies && dayStudies.length > 0;
 
             days.push(
@@ -95,7 +96,7 @@ export default function ResearcherDashboard() {
                     <button onClick={() => setCurrentDate(new Date(year, month + 1, 1))}>&gt;</button>
                 </div>
                 <div className="calendar-weekdays">
-                    {['S','M','T','W','T','F','S'].map((d, i) => <div key={i}>{d}</div>)}
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => <div key={i}>{d}</div>)}
                 </div>
                 <div className="calendar-days">{days}</div>
             </div>
@@ -121,12 +122,13 @@ export default function ResearcherDashboard() {
             }
 
             const all = researchData || [];
+            setResearches(researchData || []);
 
             // Stats
             const clean = (s) => s?.replace(/"/g, '').trim();
             setStats({
-                total:    all.length,
-                pending:  all.filter(s => clean(s.status) === 'Pending').length,
+                total: all.length,
+                pending: all.filter(s => clean(s.status) === 'Pending').length,
                 approved: all.filter(s => clean(s.status) === 'Approved').length,
                 rejected: all.filter(s => clean(s.status) === 'Rejected').length,
             });
@@ -221,9 +223,9 @@ export default function ResearcherDashboard() {
 
             setStudyDetails({
                 coauthors: coauthorsRes.data || [],
-                bio:       bioRes.data,
-                dept:      deptRes.data,
-                hraa:      hraaRes.data,
+                bio: bioRes.data,
+                dept: deptRes.data,
+                hraa: hraaRes.data,
             });
         } catch (err) {
             console.error("Error fetching study details:", err);
@@ -257,28 +259,28 @@ export default function ResearcherDashboard() {
                             <Paperclip size={45} className="research-icon" />
                             <div className="stat-text-group">
                                 <span className="stat-number">{stats.total}</span>
-                                <span className="stat-label">TOTAL<br/>RESEARCHES</span>
+                                <span className="stat-label">TOTAL<br />RESEARCHES</span>
                             </div>
                         </div>
                         <div className="stat-item">
                             <FileText size={45} className="research-icon" />
                             <div className="stat-text-group">
                                 <span className="stat-number">{stats.pending}</span>
-                                <span className="stat-label">PENDING<br/>RESEARCHES</span>
+                                <span className="stat-label">PENDING<br />RESEARCHES</span>
                             </div>
                         </div>
                         <div className="stat-item">
                             <CheckCircle size={45} className="research-icon" />
                             <div className="stat-text-group">
                                 <span className="stat-number">{stats.approved}</span>
-                                <span className="stat-label">APPROVED<br/>RESEARCHES</span>
+                                <span className="stat-label">APPROVED<br />RESEARCHES</span>
                             </div>
                         </div>
                         <div className="stat-item">
                             <XCircle size={45} className="research-icon" />
                             <div className="stat-text-group">
                                 <span className="stat-number">{stats.rejected}</span>
-                                <span className="stat-label">REJECTED<br/>RESEARCHES</span>
+                                <span className="stat-label">REJECTED<br />RESEARCHES</span>
                             </div>
                         </div>
                     </div>
@@ -292,21 +294,75 @@ export default function ResearcherDashboard() {
                         {loadingLogs ? (
                             <p className="loading-text">Loading activity...</p>
                         ) : activityLogs.length === 0 ? (
-                            <div className="empty-state">
-                                <FileText size={40} color="#ccc" />
-                                <p>No activity yet. Submit a study to get started.</p>
-                            </div>
+                            // If no logs but there are researches, show them directly
+                            researches?.length > 0 ? (
+                                <div className="table-responsive">
+                                    {researches.map((study) => {
+                                        const status = study.status?.replace(/"/g, '').trim() || 'Pending';
+                                        const statusColor = {
+                                            'Pending': { bg: '#fef9c3', text: '#854d0e', dot: '#eab308' },
+                                            'Approved': { bg: '#dcfce7', text: '#166534', dot: '#22c55e' },
+                                            'Rejected': { bg: '#fee2e2', text: '#991b1b', dot: '#ef4444' },
+                                            'With Minor Revisions': { bg: '#dbeafe', text: '#1e40af', dot: '#3b82f6' },
+                                            'With Major Revisions': { bg: '#ede9fe', text: '#5b21b6', dot: '#8b5cf6' },
+                                        }[status] || { bg: '#f1f5f9', text: '#475569', dot: '#94a3b8' };
+
+                                        return (
+                                            <div
+                                                key={study.research_id}
+                                                className="study-card"
+                                                onClick={() => handleStudyClick(study)}
+                                            >
+                                                <div className="study-card-header">
+                                                    <span className="status-badge" style={{ background: statusColor.bg, color: statusColor.text }}>
+                                                        <span className="status-dot" style={{ background: statusColor.dot }} />
+                                                        {status}
+                                                    </span>
+                                                    <span className="hru-label">{study.hru_no}</span>
+                                                    <div className="file-type-pills">
+                                                        {study.research_files?.map((f, i) => (
+                                                            <span key={i} className="file-type-badge">{f.file_type}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <div className="study-card-body">
+                                                    <strong>{study.title || 'Untitled'}</strong>
+                                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '2px', display: 'block' }}>
+                                                        Submitted · {new Date(study.created_at).toLocaleDateString('en-US', {
+                                                            month: 'short', day: 'numeric', year: 'numeric'
+                                                        })}
+                                                    </span>
+                                                </div>
+                                                {revisionCounts[study.research_id] > 0 && (
+                                                    <span style={{
+                                                        fontSize: '0.7rem', background: '#e0e7ff', color: '#3730a3',
+                                                        padding: '2px 8px', borderRadius: '999px', fontWeight: 600,
+                                                        marginTop: '4px', width: 'fit-content', display: 'block'
+                                                    }}>
+                                                        v{revisionCounts[study.research_id] + 1} · {revisionCounts[study.research_id]} revision{revisionCounts[study.research_id] > 1 ? 's' : ''}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="empty-state">
+                                    <FileText size={40} color="#ccc" />
+                                    <p>No activity yet. Submit a study to get started.</p>
+                                </div>
+                            )
                         ) : (
                             <div className="table-responsive">
                                 {activityLogs.map((log) => {
-                                    const study     = log.Research;
+                                    const study = log.Research;
                                     const status = log.status_snapshot?.trim()
                                         || study?.status?.replace(/"/g, '').trim()
                                         || '';
                                     const statusColor = {
-                                        'Pending':              { bg: '#fef9c3', text: '#854d0e', dot: '#eab308' },
-                                        'Approved':             { bg: '#dcfce7', text: '#166534', dot: '#22c55e' },
-                                        'Rejected':             { bg: '#fee2e2', text: '#991b1b', dot: '#ef4444' },
+                                        'Pending': { bg: '#fef9c3', text: '#854d0e', dot: '#eab308' },
+                                        'Approved': { bg: '#dcfce7', text: '#166534', dot: '#22c55e' },
+                                        'Rejected': { bg: '#fee2e2', text: '#991b1b', dot: '#ef4444' },
                                         'With Minor Revisions': { bg: '#dbeafe', text: '#1e40af', dot: '#3b82f6' },
                                         'With Major Revisions': { bg: '#ede9fe', text: '#5b21b6', dot: '#8b5cf6' },
                                     }[status] || { bg: '#f1f5f9', text: '#475569', dot: '#94a3b8' };
@@ -333,8 +389,8 @@ export default function ResearcherDashboard() {
                                                 <strong>{study?.title || 'Untitled'}</strong>
                                                 <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '2px', display: 'block' }}>
                                                     {log.action?.replace(/_/g, ' ')} · {new Date(log.created_at).toLocaleDateString('en-US', {
-                                                    month: 'short', day: 'numeric', year: 'numeric'
-                                                })}
+                                                        month: 'short', day: 'numeric', year: 'numeric'
+                                                    })}
                                                 </span>
                                             </div>
                                             {revisionCounts[study?.research_id] > 0 && (
@@ -510,7 +566,7 @@ export default function ResearcherDashboard() {
                                         </div>
                                         <span className="status-badge" style={{
                                             background: { 'Pending': '#fef9c3', 'Approved': '#dcfce7', 'Rejected': '#fee2e2' }[s.status] || '#f1f5f9',
-                                            color:      { 'Pending': '#854d0e', 'Approved': '#166534', 'Rejected': '#991b1b' }[s.status] || '#475569',
+                                            color: { 'Pending': '#854d0e', 'Approved': '#166534', 'Rejected': '#991b1b' }[s.status] || '#475569',
                                             fontSize: '0.7rem', padding: '3px 10px',
                                             borderRadius: '999px', fontWeight: 700
                                         }}>

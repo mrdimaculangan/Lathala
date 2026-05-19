@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
-import { UserPlus, X, Check, Users, Search, RotateCcw } from 'lucide-react';
+import { UserPlus, X, Check, Users, Search, RotateCcw, Bell, Clock, AlertCircle } from 'lucide-react';
 import AdminNavbar from "./AdminNavbar";
 import "./AdminQueue.css";
 
@@ -16,6 +16,7 @@ export default function AdminQueue() {
     const [selectedEvaluatorId, setSelectedEvaluatorId] = useState(null);
     const [alreadyAssigned, setAlreadyAssigned] = useState(null);
     const [saving, setSaving] = useState(false);
+    const [sendingNudge, setSendingNudge] = useState(null);
 
     // Pagination and Filter states
     const [currentPage, setCurrentPage] = useState(1);
@@ -406,6 +407,66 @@ export default function AdminQueue() {
         );
     };
 
+    const sendNudgeToEvaluator = async (researchId, evaluatorId, evaluatorName, researchTitle, hruNo) => {
+        try {
+            // Get evaluator's user_id
+            const { data: evaluatorData, error: evalError } = await supabase
+                .from('Evaluator')
+                .select('user_id')
+                .eq('evaluator_id', evaluatorId)
+                .single();
+
+            if (evalError) throw evalError;
+
+            // Get admin info for logging
+            const { data: { session } } = await supabase.auth.getSession();
+            const adminUserId = session?.user?.id;
+
+            // Log the nudge action 
+            const { data: logData, error: logError } = await supabase
+                .from('ResearchActivityLog')
+                .insert([{
+                    research_id: researchId,
+                    actor_id: adminUserId,
+                    actor_role: 'admin',
+                    action: 'nudged_evaluator',
+                    notes: `Admin sent reminder to evaluator ${evaluatorName} for research "${researchTitle}" (${hruNo})`,
+                }])
+                .select()
+                .single();
+
+            if (logError) {
+                console.error('Log error:', logError);
+                // Continue even if log fails - don't block the nudge
+            }
+
+            // Create notification for evaluator - REMOVE 'nudged_at' column
+            const { error: notifError } = await supabase
+                .from('evaluator_notifications')
+                .insert({
+                    recipient_id: evaluatorData.user_id,
+                    research_id: researchId,
+                    log_id: logData?.log_id || null,
+                    message: `🔔 REMINDER: Please review research "${researchTitle}" (${hruNo}) that was assigned to you.`,
+                    is_read: false,
+                    is_deleted: false
+                    // ❌ REMOVED: nudged_at: new Date().toISOString()
+                });
+
+            if (notifError) {
+                console.error('Notification insert error:', notifError);
+                throw notifError;
+            }
+
+            alert(`Nudge sent to ${evaluatorName}!`);
+            return true;
+        } catch (error) {
+            console.error('Error sending nudge:', error);
+            alert('Failed to send nudge. Please try again.');
+            return false;
+        }
+    };
+
     return (
         <div className="admin-layout">
             <AdminNavbar />
@@ -527,6 +588,26 @@ export default function AdminQueue() {
                                             >
                                                 <UserPlus size={18} />
                                             </button>
+                                            {research.assigned_evaluators?.length > 0 && (
+                                                <button
+                                                    className="icon-btn nudge-btn"
+                                                    onClick={() => {
+                                                        const evaluator = research.assigned_evaluators[0];
+                                                        if (confirm(`Send reminder to ${evaluator.name} about "${research.title}"?`)) {
+                                                            sendNudgeToEvaluator(
+                                                                research.research_id,
+                                                                evaluator.id,
+                                                                evaluator.name,
+                                                                research.title,
+                                                                research.hru_no
+                                                            );
+                                                        }
+                                                    }}
+                                                    title="Send reminder to evaluator"
+                                                >
+                                                    <Bell size={18} />
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))

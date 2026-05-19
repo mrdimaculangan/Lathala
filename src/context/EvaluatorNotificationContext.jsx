@@ -28,7 +28,7 @@ export const EvaluatorNotificationProvider = ({ children }) => {
 
         try {
             setLoading(true);
-            
+
             const { data: evaluatorData } = await supabase
                 .from('Evaluator')
                 .select('evaluator_id')
@@ -44,7 +44,7 @@ export const EvaluatorNotificationProvider = ({ children }) => {
             }
 
             console.log('🔍 Fetching evaluator notifications for user:', session.user.id);
-            
+
             const { data, error } = await supabase
                 .from('evaluator_notifications')
                 .select(`
@@ -73,7 +73,7 @@ export const EvaluatorNotificationProvider = ({ children }) => {
     const markAsRead = async (notificationId) => {
         console.log('📖 markAsRead called with ID:', notificationId);
         console.log('📖 Type of ID:', typeof notificationId);
-        
+
         if (!session?.user?.id) {
             console.error('❌ No session user ID');
             return;
@@ -89,7 +89,7 @@ export const EvaluatorNotificationProvider = ({ children }) => {
 
         try {
             console.log('📖 Updating database - setting is_read = true for notification:', notificationId);
-            
+
             const { data, error } = await supabase
                 .from('evaluator_notifications')
                 .update({ is_read: true })
@@ -119,7 +119,7 @@ export const EvaluatorNotificationProvider = ({ children }) => {
 
     const markAllAsRead = async () => {
         console.log('📚 markAllAsRead called');
-        
+
         if (!session?.user?.id) return;
 
         const unreadNotifications = notifications.filter(n => !n.is_read);
@@ -154,7 +154,7 @@ export const EvaluatorNotificationProvider = ({ children }) => {
     const deleteNotification = async (notificationId) => {
         console.log('🗑️ deleteNotification called with ID:', notificationId);
         console.log('🗑️ Type of ID:', typeof notificationId);
-        
+
         if (!session?.user?.id) {
             console.error('❌ No session user ID');
             return;
@@ -163,7 +163,7 @@ export const EvaluatorNotificationProvider = ({ children }) => {
         // Find the notification before removing it
         const deletedNotif = notifications.find(n => n.notification_id === notificationId);
         console.log('🗑️ Found notification to delete:', deletedNotif);
-        
+
         // Optimistic update
         setNotifications(prev => prev.filter(n => n.notification_id !== notificationId));
         if (deletedNotif && !deletedNotif.is_read) {
@@ -172,7 +172,7 @@ export const EvaluatorNotificationProvider = ({ children }) => {
 
         try {
             console.log('🗑️ Updating database - setting is_deleted = true for notification:', notificationId);
-            
+
             const { data, error } = await supabase
                 .from('evaluator_notifications')
                 .update({ is_deleted: true })
@@ -187,7 +187,7 @@ export const EvaluatorNotificationProvider = ({ children }) => {
                     hint: error.hint,
                     code: error.code
                 });
-                
+
                 // Rollback
                 if (deletedNotif) {
                     console.log('🔄 Rolling back - restoring notification');
@@ -196,14 +196,14 @@ export const EvaluatorNotificationProvider = ({ children }) => {
                 }
             } else {
                 console.log('✅ Successfully marked as deleted in database:', data);
-                
+
                 // Verify the update
                 const { data: verifyData, error: verifyError } = await supabase
                     .from('evaluator_notifications')
                     .select('notification_id, is_deleted')
                     .eq('notification_id', notificationId)
                     .single();
-                
+
                 if (verifyError) {
                     console.error('❌ Verification query failed:', verifyError);
                 } else {
@@ -282,7 +282,7 @@ export const EvaluatorNotificationProvider = ({ children }) => {
                     filter: `recipient_id=eq.${session.user.id}`
                 }, (payload) => {
                     console.log('🔄 Real-time: Evaluator notification updated:', payload.new);
-                    
+
                     if (payload.new.is_deleted) {
                         console.log('🗑️ Real-time: Removing deleted notification');
                         setNotifications(prev => {

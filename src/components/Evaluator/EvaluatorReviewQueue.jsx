@@ -59,22 +59,10 @@ function EvaluatorReviewQueue() {
 
             const evaluatorId = evaluatorData.evaluator_id;
 
-            const { data: queueData } = await supabase
-                .from('Research_Queue')
-                .select('research_id')
-                .eq('evaluator_id', evaluatorId);
-
-            const assignedIds = (queueData || []).map(q => q.research_id);
-            if (assignedIds.length === 0) {
-                setResearches([]);
-                setRevisions([]);
-                setLoading(false);
-                return;
-            }
-
+            // Load both submissions and revisions
             await Promise.all([
-                loadOriginalSubmissions(assignedIds, evaluatorId),   
-                loadRevisedSubmissions(assignedIds)                  
+                loadOriginalSubmissions(evaluatorId),
+                loadRevisedSubmissions(evaluatorId)
             ]);
 
         } catch (err) {
@@ -86,7 +74,7 @@ function EvaluatorReviewQueue() {
 
     async function loadOriginalSubmissions(evaluatorId) {
         try {
-            // Get research IDs from queue
+            // Get research IDs from queue for this evaluator
             const { data: queueData, error: queueError } = await supabase
                 .from('Research_Queue')
                 .select('research_id')
@@ -123,96 +111,116 @@ function EvaluatorReviewQueue() {
                 return;
             }
 
-            const formatted = (researchData || []).map(r => ({
-                ...r,
-                author: r.Researcher?.Users
-                    ? `${r.Researcher.Users.first_name || ''} ${r.Researcher.Users.last_name || ''}`.trim()
-                    : 'Unknown Author',
-                author_email: r.Researcher?.Users?.email || 'No email',
-                type: 'submission',
-                submitted_at: r.registration_date
-            }));
+            // Filter to only show PENDING submissions (not yet evaluated)
+            const formatted = (researchData || [])
+                .filter(r => {
+                    const status = r.status?.toLowerCase() || '';
+                    return status === 'pending' || status === 'under_review';
+                })
+                .map(r => ({
+                    ...r,
+                    author: r.Researcher?.Users
+                        ? `${r.Researcher.Users.first_name || ''} ${r.Researcher.Users.last_name || ''}`.trim()
+                        : 'Unknown Author',
+                    author_email: r.Researcher?.Users?.email || 'No email',
+                    type: 'submission',
+                    submitted_at: r.registration_date
+                }));
 
             setResearches(formatted);
+            console.log('Loaded submissions:', formatted.length);
         } catch (err) {
             console.error('Error loading submissions:', err);
         }
     }
 
-    async function loadRevisedSubmissions(assignedIds) {
-    try {
-        if (assignedIds.length === 0) {
-        setRevisions([]);
-        return;
+    async function loadRevisedSubmissions(evaluatorId) {
+        try {
+            // First, get the research IDs assigned to this evaluator
+            const { data: queueData, error: queueError } = await supabase
+                .from('Research_Queue')
+                .select('research_id')
+                .eq('evaluator_id', evaluatorId);
+
+            if (queueError || !queueData || queueData.length === 0) {
+                console.log('No queue data for evaluator:', evaluatorId);
+                setRevisions([]);
+                return;
+            }
+
+            const assignedResearchIds = queueData.map(q => q.research_id);
+            console.log('Assigned research IDs for revisions:', assignedResearchIds);
+
+            // Now fetch revisions for these research IDs
+            const { data: revisionsData, error } = await supabase
+                .from('ResearchRevisions')
+                .select(`
+                revision_id,
+                research_id,
+                revision_type,
+                researcher_comment,
+                new_file_url,
+                submitted_at,
+                status,
+                Research:research_id (
+                    research_id,
+                    title,
+                    hru_no,
+                    description,
+                    registration_date,
+                    researcher_id,
+                    Researcher:researcher_id (
+                        researcher_id,
+                        user_id,
+                        Users!inner (first_name, last_name, email)
+                    )
+                )
+            `)
+                .in('research_id', assignedResearchIds)
+                .eq('status', 'Pending')
+                .order('submitted_at', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching revisions:', error);
+                setRevisions([]);
+                return;
+            }
+
+            console.log('Raw revisions data:', revisionsData);
+            console.log('Number of revisions found:', revisionsData?.length || 0);
+
+            const formatted = (revisionsData || []).map(revision => {
+                const research = revision.Research;
+                const researcher = research?.Researcher;
+                const user = researcher?.Users;
+
+                return {
+                    revision_id: revision.revision_id,
+                    research_id: revision.research_id,
+                    revision_type: revision.revision_type,
+                    revision_type_display: revision.revision_type === 'minor' ? 'Minor Revision' : 'Major Revision',
+                    researcher_comment: revision.researcher_comment,
+                    new_file_url: revision.new_file_url,
+                    submitted_at: revision.submitted_at,
+                    status: revision.status,
+                    research_title: research?.title || 'Untitled',
+                    research_description: research?.description || '',
+                    hru_no: research?.hru_no || '—',
+                    original_submission_date: research?.registration_date,
+                    author: user
+                        ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown Author'
+                        : 'Unknown Author',
+                    author_email: user?.email || 'No email',
+                    type: 'revision'
+                };
+            });
+
+            setRevisions(formatted);
+            console.log('Formatted revisions:', formatted.length);
+        } catch (err) {
+            console.error('Error loading revisions:', err);
+            setRevisions([]);
         }
-
-        const { data: revisionsData, error } = await supabase
-        .from('ResearchRevisions')
-        .select(`
-            revision_id,
-            research_id,
-            revision_type,
-            researcher_comment,
-            new_file_url,
-            submitted_at,
-            status,
-            Research:research_id (
-            research_id,
-            title,
-            hru_no,
-            description,
-            registration_date,
-            researcher_id,
-            Researcher:researcher_id (
-                researcher_id,
-                user_id,
-                Users!inner (first_name, last_name, email)
-            )
-            )
-        `)
-        .in('research_id', assignedIds)           // <-- changed
-        .eq('status', 'Pending')
-        .order('submitted_at', { ascending: false });
-
-        if (error) {
-        console.error('Error fetching revisions:', error);
-        setRevisions([]);
-        return;
-        }
-
-        const formatted = (revisionsData || []).map(revision => {
-        const research = revision.Research;
-        const researcher = research?.Researcher;
-        const user = researcher?.Users;
-
-        return {
-            revision_id: revision.revision_id,
-            research_id: revision.research_id,
-            revision_type: revision.revision_type,
-            revision_type_display: revision.revision_type === 'minor' ? 'Minor Revision' : 'Major Revision',
-            researcher_comment: revision.researcher_comment,
-            new_file_url: revision.new_file_url,
-            submitted_at: revision.submitted_at,
-            status: revision.status,
-            evaluator_id: revision.evaluator_id,  // keep if column exists
-            research_title: research?.title || 'Untitled',
-            research_description: research?.description || '',
-            hru_no: research?.hru_no || '—',
-            original_submission_date: research?.registration_date,
-            research_status: research?.research_status,
-            author: user 
-            ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown Author'
-            : 'Unknown Author',
-            author_email: user?.email || 'No email',
-            type: 'revision'
-        };
-        });
-
-        setRevisions(formatted);
-    } catch (err) {
-        console.error('Error loading revisions:', err);
-        setRevisions([]);
-    }
     }
 
     const getStatusBadge = (status) => {
@@ -270,7 +278,7 @@ function EvaluatorReviewQueue() {
         } else if (modalType === 'revision' && selectedRevision) {
             // Pass revision data to the evaluation page
             navigate(`/evaluate-research/${selectedRevision.research_id}`, {
-                state: { 
+                state: {
                     revision: selectedRevision,
                     isRevision: true,
                     revisionId: selectedRevision.revision_id,
@@ -293,8 +301,8 @@ function EvaluatorReviewQueue() {
         let items = [];
         if (activeTab === 'submissions') {
             // Only show submissions with status 'Pending' (not yet evaluated)
-            items = researches.filter(r => 
-                r.status?.toLowerCase() === 'pending' || 
+            items = researches.filter(r =>
+                r.status?.toLowerCase() === 'pending' ||
                 r.status?.toLowerCase() === 'under_review'
             );
         } else {
@@ -305,7 +313,7 @@ function EvaluatorReviewQueue() {
             const title = activeTab === 'submissions' ? item.title : item.research_title;
             const hruNo = item.hru_no;
             const author = item.author;
-            
+
             return (
                 title?.toLowerCase().includes(search.toLowerCase()) ||
                 hruNo?.toLowerCase().includes(search.toLowerCase()) ||
@@ -315,8 +323,8 @@ function EvaluatorReviewQueue() {
     };
 
     const filteredItems = getFilteredItems();
-    const pendingSubmissionsCount = researches.filter(r => 
-        r.status?.toLowerCase() === 'pending' || 
+    const pendingSubmissionsCount = researches.filter(r =>
+        r.status?.toLowerCase() === 'pending' ||
         r.status?.toLowerCase() === 'under_review'
     ).length;
     const pendingRevisionsCount = revisions.length;
@@ -357,7 +365,7 @@ function EvaluatorReviewQueue() {
                             >
                                 Original Submissions
                                 {pendingSubmissionsCount > 0 && (
-                                    <span style={{ 
+                                    <span style={{
                                         marginLeft: '8px',
                                         background: activeTab === 'submissions' ? '#031640' : 'white',
                                         color: activeTab === 'submissions' ? 'white' : '#031640',
@@ -385,7 +393,7 @@ function EvaluatorReviewQueue() {
                             >
                                 Revised Papers
                                 {pendingRevisionsCount > 0 && (
-                                    <span style={{ 
+                                    <span style={{
                                         marginLeft: '8px',
                                         background: activeTab === 'revisions' ? '#031640' : 'white',
                                         color: activeTab === 'revisions' ? 'white' : '#031640',
@@ -422,7 +430,7 @@ function EvaluatorReviewQueue() {
                             {search && <small>Try adjusting your search terms.</small>}
                             {filteredItems.length === 0 && !search && (
                                 <small>
-                                    {activeTab === 'submissions' 
+                                    {activeTab === 'submissions'
                                         ? 'No pending research submissions assigned to you.'
                                         : 'No pending revisions assigned to you.'}
                                 </small>
@@ -431,21 +439,21 @@ function EvaluatorReviewQueue() {
                     ) : (
                         filteredItems.map((item) => {
                             const isRevision = activeTab === 'revisions';
-                            const statusInfo = isRevision 
+                            const statusInfo = isRevision
                                 ? getRevisionTypeDisplay(item.revision_type)
                                 : getStatusBadge(item.status);
-                            
+
                             return (
-                                <div 
+                                <div
                                     key={isRevision ? item.revision_id : item.research_id}
                                     className="alog-row"
                                     onClick={() => isRevision ? handleRevisionClick(item) : handleSubmissionClick(item)}
                                     style={{ cursor: 'pointer' }}
                                 >
                                     <div>
-                                        <span 
+                                        <span
                                             className="alog-status-badge"
-                                            style={{ 
+                                            style={{
                                                 background: statusInfo.bg,
                                                 color: statusInfo.color,
                                                 display: 'inline-flex',
@@ -596,7 +604,7 @@ function EvaluatorReviewQueue() {
                                     <div className="detail-grid">
                                         <div className="detail-item">
                                             <label>Revision Type</label>
-                                            <p style={{ 
+                                            <p style={{
                                                 color: getRevisionTypeDisplay(selectedRevision.revision_type).color,
                                                 fontWeight: 600
                                             }}>

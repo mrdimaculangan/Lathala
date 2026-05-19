@@ -755,3 +755,40 @@
         padding: 4px 8px;
     }
 }
+
+.nudge-btn {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.nudge-btn:hover {
+    background-color: #fde68a;
+    transform: scale(1.05);
+}
+
+.nudge-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.nudge-btn.urgent {
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        background-color: #fef3c7;
+    }
+
+    50% {
+        transform: scale(1.1);
+        background-color: #f59e0b;
+        color: white;
+    }
+
+    100% {
+        transform: scale(1);
+        background-color: #fef3c7;
+    }
+}
